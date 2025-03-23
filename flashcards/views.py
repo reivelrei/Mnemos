@@ -1,4 +1,5 @@
 from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from .models import Flashcard, FlashcardSet
 
@@ -46,3 +47,31 @@ def edit_flashcard_set(request, flashcard_set_id):
         return redirect('index')
     else:
         return redirect('index')
+
+
+#@login_required
+def add_flashcard(request, flashcard_set_id):
+    if request.method == 'POST':
+        flashcard_set = get_object_or_404(FlashcardSet, id=flashcard_set_id)
+
+        # Get form data
+        front = request.POST.get('front')
+        back = request.POST.get('back')
+
+        # Create and save new flashcard
+        flashcard = Flashcard.objects.create(
+            front=front,
+            back=back,
+            flashcard_set=flashcard_set
+        )
+
+        # Return JSON response instead of redirecting
+        return JsonResponse({
+            "success": True,
+            "flashcard": {
+                "front": flashcard.front,
+                "back": flashcard.back
+            }
+        })
+
+    return JsonResponse({"success": False, "error": "Invalid request"}, status=400)
