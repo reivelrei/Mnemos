@@ -4,6 +4,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from .models import Flashcard, FlashcardSet
 
 
+@login_required
 def index(request):
     # Fetch all flashcard sets
     flashcard_sets = FlashcardSet.objects.all()
@@ -14,7 +15,7 @@ def index(request):
     }
     return render(request, 'flashcards/index.html', context)
 
-
+@login_required
 def flashcard_view(request, flashcard_id):
     # Fetch the flashcard object or return a 404 error if not found
     flashcard = get_object_or_404(Flashcard, id=flashcard_id)
@@ -31,12 +32,12 @@ def flashcard_view(request, flashcard_id):
     # Render the template with the context
     return render(request, 'flashcards/flashcard_detail.html', context)
 
-#@login_required
+@login_required
 def edit_flashcard_set(request, flashcard_set_id):
     if request.method == 'POST':
         # Fetch the flashcard set
-        # flashcard_set = get_object_or_404(FlashcardSet, id=flashcard_set_id, created_by=request.user)
-        flashcard_set = get_object_or_404(FlashcardSet, id=flashcard_set_id)
+        flashcard_set = get_object_or_404(FlashcardSet, id=flashcard_set_id, created_by=request.user)
+        #flashcard_set = get_object_or_404(FlashcardSet, id=flashcard_set_id)
 
         # Update the title and description
         flashcard_set.title = request.POST.get('title')
@@ -49,7 +50,7 @@ def edit_flashcard_set(request, flashcard_set_id):
         return redirect('index')
 
 
-#@login_required
+@login_required
 def add_flashcard(request, flashcard_set_id):
     if request.method == 'POST':
         flashcard_set = get_object_or_404(FlashcardSet, id=flashcard_set_id)

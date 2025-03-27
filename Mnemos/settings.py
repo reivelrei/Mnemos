@@ -25,6 +25,14 @@ SECRET_KEY = "django-insecure-c)%j==l72)(!4$kimq24ij71ket2yh6)jp(g1$s7g3nelipqmr
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
+# Redirect users after login/logout
+LOGIN_REDIRECT_URL = "index"
+LOGOUT_REDIRECT_URL = "login"
+
+LOGIN_URL = "/userauth/login/"
+
+AUTH_USER_MODEL = 'userauth.User'
+
 ALLOWED_HOSTS = []
 
 
@@ -38,6 +46,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "userauth"
 ]
 
 MIDDLEWARE = [

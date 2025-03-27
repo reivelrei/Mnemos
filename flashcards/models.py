@@ -1,16 +1,10 @@
 from django.db import models
-
-class User(models.Model):
-    username = models.CharField(max_length=50)
-    password = models.CharField(max_length=50)
-    email = models.EmailField()
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+from django.contrib.auth import get_user_model
 
 class FlashcardSet(models.Model):
     title = models.CharField(max_length=50)
     description = models.CharField(max_length=255)
-    created_by = models.ForeignKey(User, on_delete=models.CASCADE)
+    created_by = models.ForeignKey(get_user_model(), on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

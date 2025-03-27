@@ -1,11 +1,7 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Flashcard Sets</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+{% extends "base.html" %}
+{% block title %}Login{% endblock %}
+{% block content %}
+
     <style>
         .list-group-item:hover {
             background-color: rgba(255, 255, 255, 0.1);
@@ -16,11 +12,6 @@
             color: #ddd;
         }
     </style>
-
-</head>
-<body style="background-color: #0f1010;">
-<div class="container mt-5">
-    <h1 class="text-center mb-4 text-light">Mnemos</h1>
 
     <div class="list-group" data-bs-theme="dark">
         {% for flashcard_set in flashcard_sets %}
@@ -51,150 +42,146 @@
                 <p class="mb-0">No flashcard sets available.</p>
             </div>
         {% endfor %}
-    </div>
 
-    <!-- Modal for Editing Flashcard Set -->
-    <div class="modal fade" id="editFlashcardSetModal" tabindex="-1" aria-labelledby="editFlashcardSetModalLabel"
-         aria-hidden="true" data-bs-theme="dark">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title text-light" id="editFlashcardSetModalLabel">Edit Flashcard Set</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <!-- Form for Editing Flashcard Set -->
-                    <form id="editFlashcardSetForm" method="post">
-                        {% csrf_token %}
-                        <div class="mb-3">
-                            <label for="editTitle" class="form-label text-light">Title</label>
-                            <input type="text" class="form-control" id="editTitle" name="title" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="editDescription" class="form-label text-light">Description</label>
-                            <textarea class="form-control" id="editDescription" name="description" rows="3"
-                                      required></textarea>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="submit" form="editFlashcardSetForm" class="btn btn-primary">Save changes</button>
-                </div>
-            </div>
-        </div>
-    </div>
 
-    <!-- Add Flashcard Modal -->
-    <div class="modal fade" id="addFlashcardModal" tabindex="-1" aria-labelledby="addFlashcardModalLabel"
-         aria-hidden="true" data-bs-theme="dark">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title text-light" id="addFlashcardModalLabel">Add Flashcard</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <!-- Form for Adding Flashcard -->
-                    <form id="addFlashcardForm" method="post" action="">
-                        {% csrf_token %}
-                        <div class="mb-3">
-                            <label for="flashcardFront" class="form-label text-light">Front</label>
-                            <input type="text" class="form-control" id="flashcardFront" name="front" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="flashcardBack" class="form-label text-light">Back</label>
-                            <input type="text" class="form-control" id="flashcardBack" name="back" required>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="submit" form="addFlashcardForm" class="btn btn-primary">Save Flashcard</button>
+        <!-- Modal for Editing Flashcard Set -->
+        <div class="modal fade" id="editFlashcardSetModal" tabindex="-1" aria-labelledby="editFlashcardSetModalLabel"
+             aria-hidden="true" data-bs-theme="dark">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title text-light" id="editFlashcardSetModalLabel">Edit Flashcard Set</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <!-- Form for Editing Flashcard Set -->
+                        <form id="editFlashcardSetForm" method="post">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <label for="editTitle" class="form-label text-light">Title</label>
+                                <input type="text" class="form-control" id="editTitle" name="title" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="editDescription" class="form-label text-light">Description</label>
+                                <textarea class="form-control" id="editDescription" name="description" rows="3"
+                                          required></textarea>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="submit" form="editFlashcardSetForm" class="btn btn-primary">Save changes</button>
+                    </div>
                 </div>
             </div>
         </div>
+
+        <!-- Add Flashcard Modal -->
+        <div class="modal fade" id="addFlashcardModal" tabindex="-1" aria-labelledby="addFlashcardModalLabel"
+             aria-hidden="true" data-bs-theme="dark">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title text-light" id="addFlashcardModalLabel">Add Flashcard</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <!-- Form for Adding Flashcard -->
+                        <form id="addFlashcardForm" method="post" action="">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <label for="flashcardFront" class="form-label text-light">Front</label>
+                                <input type="text" class="form-control" id="flashcardFront" name="front" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="flashcardBack" class="form-label text-light">Back</label>
+                                <input type="text" class="form-control" id="flashcardBack" name="back" required>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="submit" form="addFlashcardForm" class="btn btn-primary">Save Flashcard</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div>
 
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            console.log("JavaScript Loaded");
 
-</div>
+            // Edit Flashcard Set Modal
+            const gearButtons = document.querySelectorAll('.btn-outline-secondary');
+            gearButtons.forEach(button => {
+                button.addEventListener('click', function (event) {
+                    event.preventDefault();
+                    console.log("Edit button clicked");
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+                    const listItem = button.closest('.list-group-item');
+                    const title = listItem.querySelector('h5').innerText;
+                    const description = listItem.querySelector('p').innerText;
+                    const flashcardSetId = button.getAttribute('data-flashcard-set-id');
 
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        console.log("JavaScript Loaded");
+                    document.getElementById('editTitle').value = title;
+                    document.getElementById('editDescription').value = description;
+                    document.getElementById('editFlashcardSetForm').action = `/flashcards/edit-flashcard-set/${flashcardSetId}/`;
 
-        // Edit Flashcard Set Modal
-        const gearButtons = document.querySelectorAll('.btn-outline-secondary');
-        gearButtons.forEach(button => {
-            button.addEventListener('click', function (event) {
-                event.preventDefault();
-                console.log("Edit button clicked");
-
-                const listItem = button.closest('.list-group-item');
-                const title = listItem.querySelector('h5').innerText;
-                const description = listItem.querySelector('p').innerText;
-                const flashcardSetId = button.getAttribute('data-flashcard-set-id');
-
-                document.getElementById('editTitle').value = title;
-                document.getElementById('editDescription').value = description;
-                document.getElementById('editFlashcardSetForm').action = `/flashcards/edit-flashcard-set/${flashcardSetId}/`;
-
-                const modal = new bootstrap.Modal(document.getElementById('editFlashcardSetModal'));
-                modal.show();
+                    const modal = new bootstrap.Modal(document.getElementById('editFlashcardSetModal'));
+                    modal.show();
+                });
             });
-        });
 
-        // Open Add Flashcard Modal
-        document.querySelectorAll('.add-flashcard-btn').forEach(button => {
-            button.addEventListener('click', function (event) {
-                event.preventDefault();
-                console.log("Add Flashcard button clicked");
+            // Open Add Flashcard Modal
+            document.querySelectorAll('.add-flashcard-btn').forEach(button => {
+                button.addEventListener('click', function (event) {
+                    event.preventDefault();
+                    console.log("Add Flashcard button clicked");
 
-                const flashcardSetId = button.getAttribute('data-flashcard-set-id');
-                document.getElementById('addFlashcardForm').action = `/flashcards/add-flashcard/${flashcardSetId}/`;
+                    const flashcardSetId = button.getAttribute('data-flashcard-set-id');
+                    document.getElementById('addFlashcardForm').action = `/flashcards/add-flashcard/${flashcardSetId}/`;
 
-                // Show the modal
-                const modal = new bootstrap.Modal(document.getElementById('addFlashcardModal'));
-                modal.show();
+                    // Show the modal
+                    const modal = new bootstrap.Modal(document.getElementById('addFlashcardModal'));
+                    modal.show();
+                });
             });
-        });
 
-        // Handle Form Submission via AJAX
-        // AJAX faciliates several additions of flashcards
-        document.getElementById('addFlashcardForm').addEventListener('submit', function (event) {
-            event.preventDefault();  // Prevent default form submission
-            console.log("Submitting flashcard form via AJAX");
+            // Handle Form Submission via AJAX
+            // AJAX faciliates several additions of flashcards
+            document.getElementById('addFlashcardForm').addEventListener('submit', function (event) {
+                event.preventDefault();  // Prevent default form submission
+                console.log("Submitting flashcard form via AJAX");
 
-            const form = this;
-            const formData = new FormData(form);
-            const actionUrl = form.action;
+                const form = this;
+                const formData = new FormData(form);
+                const actionUrl = form.action;
 
-            fetch(actionUrl, {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'  // Mark request as AJAX
-                }
-            })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        console.log("Flashcard added successfully!");
-
-                        // Clear form fields for next input
-                        form.reset();
-                    } else {
-                        console.error("Error adding flashcard:", data.error);
+                fetch(actionUrl, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'  // Mark request as AJAX
                     }
                 })
-                .catch(error => {
-                    console.error("AJAX error:", error);
-                });
-        });
-    });
-</script>
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            console.log("Flashcard added successfully!");
 
-</body>
-</html>
+                            // Clear form fields for next input
+                            form.reset();
+                        } else {
+                            console.error("Error adding flashcard:", data.error);
+                        }
+                    })
+                    .catch(error => {
+                        console.error("AJAX error:", error);
+                    });
+            });
+        });
+    </script>
+
+{% endblock %}
