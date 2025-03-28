@@ -13,26 +13,32 @@
         }
     </style>
 
+    <!-- List of Flashcard Sets -->
     <div class="list-group" data-bs-theme="dark">
         {% for flashcard_set in flashcard_sets %}
             <div class="list-group-item d-flex align-items-center justify-content-between position-relative">
-                <!-- Clickable Overlay -->
-                <a href="{% url 'flashcard-detail' flashcard_set.flashcard_set.first.id %}"
-                   class="stretched-link text-decoration-none">
-                    <div>
-                        <h5 class="mb-1">{{ flashcard_set.title }}</h5>
-                        <p class="mb-1">{{ flashcard_set.description }}</p>
-                        <small class="text-muted">Created by: {{ flashcard_set.created_by.username }}
-                            | {{ flashcard_set.created_at|date:"M d, Y" }}</small>
-                    </div>
+
+                <!-- Check if the flashcard set has at least one flashcard -->
+                {% if flashcard_set.flashcard_set.exists %}
+                    <a href="{% url 'flashcard-detail' flashcard_set.flashcard_set.first.id %}"
+                       class="stretched-link text-decoration-none">
+                {% else %}
+                    <a href="" class="stretched-link text-decoration-none disabled">
+                {% endif %}
+
+                <div>
+                    <h5 class="mb-1">{{ flashcard_set.title }}</h5>
+                    <p class="mb-1">{{ flashcard_set.description }}</p>
+                    <small class="text-muted">Created by: {{ flashcard_set.created_by.username }}
+                        | {{ flashcard_set.created_at|date:"M d, Y" }}</small>
+                </div>
                 </a>
-                <!-- Buttons (Flex container) -->
+
+                <!-- Buttons -->
                 <div class="d-flex align-items-center gap-2 z-1">
-                    <!-- Gear Icon Button -->
                     <button class="btn btn-outline-secondary btn-sm" data-flashcard-set-id="{{ flashcard_set.id }}">
                         <i class="bi bi-gear"></i>
                     </button>
-                    <!-- Add Flashcards Button -->
                     <a href="#" class="btn btn-primary btn-sm add-flashcard-btn"
                        data-flashcard-set-id="{{ flashcard_set.id }}">Add Flashcards</a>
                 </div>
@@ -42,70 +48,71 @@
                 <p class="mb-0">No flashcard sets available.</p>
             </div>
         {% endfor %}
+    </div>
 
 
-        <!-- Modal for Editing Flashcard Set -->
-        <div class="modal fade" id="editFlashcardSetModal" tabindex="-1" aria-labelledby="editFlashcardSetModalLabel"
-             aria-hidden="true" data-bs-theme="dark">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title text-light" id="editFlashcardSetModalLabel">Edit Flashcard Set</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <!-- Form for Editing Flashcard Set -->
-                        <form id="editFlashcardSetForm" method="post">
-                            {% csrf_token %}
-                            <div class="mb-3">
-                                <label for="editTitle" class="form-label text-light">Title</label>
-                                <input type="text" class="form-control" id="editTitle" name="title" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="editDescription" class="form-label text-light">Description</label>
-                                <textarea class="form-control" id="editDescription" name="description" rows="3"
-                                          required></textarea>
-                            </div>
-                        </form>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                        <button type="submit" form="editFlashcardSetForm" class="btn btn-primary">Save changes</button>
-                    </div>
+    <!-- Modal for Editing Flashcard Set -->
+    <div class="modal fade" id="editFlashcardSetModal" tabindex="-1" aria-labelledby="editFlashcardSetModalLabel"
+         aria-hidden="true" data-bs-theme="dark">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title text-light" id="editFlashcardSetModalLabel">Edit Flashcard Set</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Form for Editing Flashcard Set -->
+                    <form id="editFlashcardSetForm" method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="editTitle" class="form-label text-light">Title</label>
+                            <input type="text" class="form-control" id="editTitle" name="title" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editDescription" class="form-label text-light">Description</label>
+                            <textarea class="form-control" id="editDescription" name="description" rows="3"
+                                      required></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" form="editFlashcardSetForm" class="btn btn-primary">Save changes</button>
                 </div>
             </div>
         </div>
+    </div>
 
-        <!-- Add Flashcard Modal -->
-        <div class="modal fade" id="addFlashcardModal" tabindex="-1" aria-labelledby="addFlashcardModalLabel"
-             aria-hidden="true" data-bs-theme="dark">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title text-light" id="addFlashcardModalLabel">Add Flashcard</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <!-- Form for Adding Flashcard -->
-                        <form id="addFlashcardForm" method="post" action="">
-                            {% csrf_token %}
-                            <div class="mb-3">
-                                <label for="flashcardFront" class="form-label text-light">Front</label>
-                                <input type="text" class="form-control" id="flashcardFront" name="front" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="flashcardBack" class="form-label text-light">Back</label>
-                                <input type="text" class="form-control" id="flashcardBack" name="back" required>
-                            </div>
-                        </form>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                        <button type="submit" form="addFlashcardForm" class="btn btn-primary">Save Flashcard</button>
-                    </div>
+    <!-- Add Flashcard Modal -->
+    <div class="modal fade" id="addFlashcardModal" tabindex="-1" aria-labelledby="addFlashcardModalLabel"
+         aria-hidden="true" data-bs-theme="dark">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title text-light" id="addFlashcardModalLabel">Add Flashcard</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Form for Adding Flashcard -->
+                    <form id="addFlashcardForm" method="post" action="">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="flashcardFront" class="form-label text-light">Front</label>
+                            <input type="text" class="form-control" id="flashcardFront" name="front" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="flashcardBack" class="form-label text-light">Back</label>
+                            <input type="text" class="form-control" id="flashcardBack" name="back" required>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" form="addFlashcardForm" class="btn btn-primary">Save Flashcard</button>
                 </div>
             </div>
         </div>
+    </div>
 
     </div>
 

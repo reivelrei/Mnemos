@@ -15,6 +15,7 @@ def index(request):
     }
     return render(request, "flashcards/index.html", context)
 
+
 @login_required
 def flashcard_view(request, flashcard_id):
     # Fetch the flashcard object or return a 404 error if not found
@@ -32,6 +33,7 @@ def flashcard_view(request, flashcard_id):
     # Render the template with the context
     return render(request, "flashcards/flashcard_detail.html", context)
 
+
 @login_required
 def edit_flashcard_set(request, flashcard_set_id):
     if request.method == "POST":
@@ -47,6 +49,7 @@ def edit_flashcard_set(request, flashcard_set_id):
     else:
         return redirect("index")
 
+
 @login_required
 def edit_flashcard(request, flashcard_id):
     if request.method == "POST":
@@ -60,6 +63,7 @@ def edit_flashcard(request, flashcard_id):
         return JsonResponse({"success": True, "front": flashcard.front, "back": flashcard.back})
 
     return JsonResponse({"success": False}, status=400)
+
 
 @login_required
 def add_flashcard(request, flashcard_set_id):
@@ -87,3 +91,30 @@ def add_flashcard(request, flashcard_set_id):
         })
 
     return JsonResponse({"success": False, "error": "Invalid request"}, status=400)
+
+
+@login_required
+def delete_flashcard(request, flashcard_id):
+    if request.method == "POST":
+        flashcard = get_object_or_404(Flashcard, id=flashcard_id)
+        flashcard_set = flashcard.flashcard_set
+
+        # Get next or previous flashcard before deleting
+        previous_card = flashcard.get_previous_card_in_set()
+        next_card = flashcard.get_next_card_in_set()
+
+        flashcard.delete()
+
+        # Check if there are any flashcards left in the set
+        remaining_flashcards = Flashcard.objects.filter(flashcard_set=flashcard_set)
+
+        if not remaining_flashcards.exists():
+            return JsonResponse({"redirect_url": "/flashcards/"})  # Redirect to flashcards if set is empty
+        elif next_card and Flashcard.objects.filter(id=next_card.id).exists():
+            return JsonResponse({"redirect_url": f"/flashcards/{next_card.id}/"})  # Redirect to next
+        elif previous_card and Flashcard.objects.filter(id=previous_card.id).exists():
+            return JsonResponse({"redirect_url": f"/flashcards/{previous_card.id}/"})  # Redirect to previous
+        else:
+            return JsonResponse({"redirect_url": "/flashcards/"})  # Fallback to flashcards
+
+    return JsonResponse({"error": "Invalid request"}, status=400)

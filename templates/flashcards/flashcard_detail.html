@@ -7,7 +7,8 @@
             <div class="card-body text-center d-flex flex-column justify-content-between">
 
                 <div class="d-flex justify-content-between">
-                    <button class="btn btn-outline-secondary btn-sm">
+                    <button class="btn btn-outline-secondary btn-sm delete-flashcard"
+                            data-flashcard-id="{{ flashcard.id }}">
                         <i class="bi bi-trash"></i>
                     </button>
                     <p class="card-title">{{ flashcard.flashcard_set }}</p>
@@ -20,7 +21,7 @@
 
                 {% if show_back %}
                     <div class="text-center">
-                    <p class="card-text fs-5">{{ flashcard.back }}</p>
+                        <p class="card-text fs-5">{{ flashcard.back }}</p>
                     </div>
                 {% else %}
                     <div class="text-center">
@@ -96,69 +97,101 @@
 
 
     <script>
-    document.addEventListener("DOMContentLoaded", function () {
-        console.log("JavaScript Loaded");
+        document.addEventListener("DOMContentLoaded", function () {
+            console.log("JavaScript Loaded");
 
-        const gearButtons = document.querySelectorAll("button.select-gear");
-        gearButtons.forEach(button => {
-            button.addEventListener("click", function (event) {
-                event.preventDefault();
-                console.log("Edit button clicked");
+            const gearButtons = document.querySelectorAll("button.select-gear");
+            gearButtons.forEach(button => {
+                button.addEventListener("click", function (event) {
+                    event.preventDefault();
+                    console.log("Edit button clicked");
 
-                const card = button.closest(".card");
-                const front = card.querySelector("h5.card-text").innerText;
-                const backElement = card.querySelector("p.card-text");
-                const back = backElement ? backElement.innerText : "{{ flashcard.back|escapejs }}";
-
-                const flashcardId = button.getAttribute("data-flashcard-id");
-
-                document.getElementById("editFront").value = front;
-                document.getElementById("editBack").value = back;
-                document.getElementById("editFlashcardForm").setAttribute("data-flashcard-id", flashcardId);
-
-                const modal = new bootstrap.Modal(document.getElementById("editFlashcardModal"));
-                modal.show();
-            });
-        });
-
-        // Handle AJAX form submission
-        document.getElementById("editFlashcardForm").addEventListener("submit", function (event) {
-            event.preventDefault();  // Prevent normal form submission
-
-            const flashcardId = this.getAttribute("data-flashcard-id");
-            const formData = new FormData(this);
-
-            fetch(`/flashcards/edit-flashcard/${flashcardId}/`, {
-                method: "POST",
-                body: formData,
-                headers: {
-                    "X-Requested-With": "XMLHttpRequest"
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    console.log("Flashcard updated successfully");
-
-                    // Update the card on the page
-                    const card = document.querySelector(`[data-flashcard-id="${flashcardId}"]`).closest(".card");
-                    card.querySelector("h5.card-text").innerText = data.front;
-
-                    // Check if the back text exists before updating it
+                    const card = button.closest(".card");
+                    const front = card.querySelector("h5.card-text").innerText;
                     const backElement = card.querySelector("p.card-text");
-                    if (backElement) {
-                        backElement.innerText = data.back;
+                    const back = backElement ? backElement.innerText : "{{ flashcard.back|escapejs }}";
+
+                    const flashcardId = button.getAttribute("data-flashcard-id");
+
+                    document.getElementById("editFront").value = front;
+                    document.getElementById("editBack").value = back;
+                    document.getElementById("editFlashcardForm").setAttribute("data-flashcard-id", flashcardId);
+
+                    const modal = new bootstrap.Modal(document.getElementById("editFlashcardModal"));
+                    modal.show();
+                });
+            });
+
+            // Handle AJAX form submission
+            document.getElementById("editFlashcardForm").addEventListener("submit", function (event) {
+                event.preventDefault();  // Prevent normal form submission
+
+                const flashcardId = this.getAttribute("data-flashcard-id");
+                const formData = new FormData(this);
+
+                fetch(`/flashcards/edit-flashcard/${flashcardId}/`, {
+                    method: "POST",
+                    body: formData,
+                    headers: {
+                        "X-Requested-With": "XMLHttpRequest"
+                    }
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            console.log("Flashcard updated successfully");
+
+                            // Update the card on the page
+                            const card = document.querySelector(`[data-flashcard-id="${flashcardId}"]`).closest(".card");
+                            card.querySelector("h5.card-text").innerText = data.front;
+
+                            // Check if the back text exists before updating it
+                            const backElement = card.querySelector("p.card-text");
+                            if (backElement) {
+                                backElement.innerText = data.back;
+                            }
+
+                            // Hide the modal
+                            const modal = bootstrap.Modal.getInstance(document.getElementById("editFlashcardModal"));
+                            modal.hide();
+                        }
+                    })
+                    .catch(error => console.error("Error updating flashcard:", error));
+            });
+
+            // Handle Flashcard Deletion
+            const deleteButtons = document.querySelectorAll("button.delete-flashcard");
+            deleteButtons.forEach(button => {
+                button.addEventListener("click", function (event) {
+                    event.preventDefault();
+                    console.log("Delete button clicked");
+
+                    const flashcardId = button.getAttribute("data-flashcard-id");
+
+                    if (!confirm("Are you sure you want to delete this flashcard?")) {
+                        return;  // Stop execution if user cancels
                     }
 
-                    // Hide the modal
-                    const modal = bootstrap.Modal.getInstance(document.getElementById("editFlashcardModal"));
-                    modal.hide();
-                }
-            })
-            .catch(error => console.error("Error updating flashcard:", error));
+                    fetch(`/flashcards/delete-flashcard/${flashcardId}/`, {
+                        method: "POST",
+                        headers: {
+                            "X-Requested-With": "XMLHttpRequest",
+                            "X-CSRFToken": "{{ csrf_token }}"  // Pass CSRF token
+                        }
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.redirect_url) {
+                                window.location.href = data.redirect_url;  // Redirect user
+                            } else {
+                                console.error("No redirect URL received.");
+                            }
+                        })
+                        .catch(error => console.error("Error deleting flashcard:", error));
+                });
+            });
         });
-    });
-</script>
+    </script>
 
 
 {% endblock %}
