@@ -3,24 +3,33 @@
 {% block content %}
 
     <div class="row justify-content-center" style="margin-top: 200px;">
-        <div class="card align-middle mt-5" style="width: 24rem;" data-bs-theme="dark">
-            <div class="card-body text-center">
-                <!-- Flashcard Set Title -->
-                <p class="card-title mb-4">{{ flashcard.flashcard_set }}</p>
+        <div class="card align-middle mt-5" style="width: 28rem; height: 20rem;" data-bs-theme="dark">
+            <div class="card-body text-center d-flex flex-column justify-content-between">
 
-                <!-- Flashcard Front Content -->
+                <div class="d-flex justify-content-between">
+                    <button class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                    <p class="card-title">{{ flashcard.flashcard_set }}</p>
+                    <button class="btn btn-outline-secondary select-gear btn-sm" data-flashcard-id="{{ flashcard.id }}">
+                        <i class="bi bi-gear"></i>
+                    </button>
+                </div>
+
                 <h5 class="card-text fs-5 mb-4">{{ flashcard.front }}</h5>
 
-                <!-- Flashcard Back Content (Conditional) -->
                 {% if show_back %}
-                    <p class="card-text fs-5 mb-4">{{ flashcard.back }}</p>
+                    <div class="text-center">
+                    <p class="card-text fs-5">{{ flashcard.back }}</p>
+                    </div>
                 {% else %}
-                    <a href="?show_back=True" class="btn btn-primary btn-sm mb-4">Show</a>
+                    <div class="text-center">
+                        <a href="?show_back=True" class="btn btn-primary btn-sm"
+                           style="width: 8rem; display: inline-block;">Show</a>
+                    </div>
                 {% endif %}
 
-                <!-- Navigation Buttons -->
                 <div class="d-flex justify-content-between">
-                    <!-- Previous Card Button -->
                     {% with previous_card=flashcard.get_previous_card_in_set %}
                         {% if previous_card %}
                             <a href="{% url 'flashcard-detail' previous_card.id %}"
@@ -34,7 +43,6 @@
                         {% endif %}
                     {% endwith %}
 
-                    <!-- Next Card Button -->
                     {% with next_card=flashcard.get_next_card_in_set %}
                         {% if next_card %}
                             <a href="{% url 'flashcard-detail' next_card.id %}"
@@ -51,5 +59,106 @@
             </div>
         </div>
     </div>
+
+
+
+    <!-- Modal for Editing Flashcard -->
+    <div class="modal fade" id="editFlashcardModal" tabindex="-1" aria-labelledby="editFlashcardModalLabel"
+         aria-hidden="true" data-bs-theme="dark">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title text-light" id="editFlashcardModalLabel">Edit Flashcard</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Form for Editing Flashcard -->
+                    <form id="editFlashcardForm" method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="editFront" class="form-label text-light">Front</label>
+                            <input type="text" class="form-control" id="editFront" name="front" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editBack" class="form-label text-light">Back</label>
+                            <textarea class="form-control" id="editBack" name="back" rows="3"
+                                      required></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" form="editFlashcardForm" class="btn btn-primary">Save changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+    document.addEventListener("DOMContentLoaded", function () {
+        console.log("JavaScript Loaded");
+
+        const gearButtons = document.querySelectorAll("button.select-gear");
+        gearButtons.forEach(button => {
+            button.addEventListener("click", function (event) {
+                event.preventDefault();
+                console.log("Edit button clicked");
+
+                const card = button.closest(".card");
+                const front = card.querySelector("h5.card-text").innerText;
+                const backElement = card.querySelector("p.card-text");
+                const back = backElement ? backElement.innerText : "{{ flashcard.back|escapejs }}";
+
+                const flashcardId = button.getAttribute("data-flashcard-id");
+
+                document.getElementById("editFront").value = front;
+                document.getElementById("editBack").value = back;
+                document.getElementById("editFlashcardForm").setAttribute("data-flashcard-id", flashcardId);
+
+                const modal = new bootstrap.Modal(document.getElementById("editFlashcardModal"));
+                modal.show();
+            });
+        });
+
+        // Handle AJAX form submission
+        document.getElementById("editFlashcardForm").addEventListener("submit", function (event) {
+            event.preventDefault();  // Prevent normal form submission
+
+            const flashcardId = this.getAttribute("data-flashcard-id");
+            const formData = new FormData(this);
+
+            fetch(`/flashcards/edit-flashcard/${flashcardId}/`, {
+                method: "POST",
+                body: formData,
+                headers: {
+                    "X-Requested-With": "XMLHttpRequest"
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    console.log("Flashcard updated successfully");
+
+                    // Update the card on the page
+                    const card = document.querySelector(`[data-flashcard-id="${flashcardId}"]`).closest(".card");
+                    card.querySelector("h5.card-text").innerText = data.front;
+
+                    // Check if the back text exists before updating it
+                    const backElement = card.querySelector("p.card-text");
+                    if (backElement) {
+                        backElement.innerText = data.back;
+                    }
+
+                    // Hide the modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById("editFlashcardModal"));
+                    modal.hide();
+                }
+            })
+            .catch(error => console.error("Error updating flashcard:", error));
+        });
+    });
+</script>
+
 
 {% endblock %}
