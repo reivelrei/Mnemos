@@ -7,7 +7,7 @@ from .models import Flashcard, FlashcardSet
 @login_required
 def index(request):
     # Fetch all flashcard sets
-    flashcard_sets = FlashcardSet.objects.all()
+    flashcard_sets = FlashcardSet.objects.all().filter(created_by=request.user)
 
     # Pass the flashcard sets to the template
     context = {
@@ -116,5 +116,30 @@ def delete_flashcard(request, flashcard_id):
             return JsonResponse({"redirect_url": f"/flashcards/{previous_card.id}/"})  # Redirect to previous
         else:
             return JsonResponse({"redirect_url": "/flashcards/"})  # Fallback to flashcards
+
+    return JsonResponse({"error": "Invalid request"}, status=400)
+
+
+@login_required
+def add_flashcard_set(request):
+    if request.method == "POST":
+        title = request.POST.get("title")
+        description = request.POST.get("description")
+        if title and description:
+            FlashcardSet.objects.create(
+                title=title,
+                description=description,
+                created_by=request.user
+            )
+        return redirect("index")  # Change to your actual view name
+    return render(request, "index.html")
+
+
+@login_required
+def delete_flashcard_set(request, flashcard_set_id):
+    if request.method == "POST":
+        flashcard_set = get_object_or_404(FlashcardSet, id=flashcard_set_id)
+        flashcard_set.delete()
+        return JsonResponse({"redirect_url": "/flashcards/"})
 
     return JsonResponse({"error": "Invalid request"}, status=400)
