@@ -1,8 +1,16 @@
+import os
+import json
+import requests
+from dotenv import load_dotenv
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from .models import Flashcard, FlashcardSet
 
+load_dotenv()
+
+GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 @login_required
 def index(request):
@@ -125,13 +133,106 @@ def add_flashcard_set(request):
     if request.method == "POST":
         title = request.POST.get("title")
         description = request.POST.get("description")
-        if title and description:
-            FlashcardSet.objects.create(
-                title=title,
-                description=description,
-                created_by=request.user
-            )
-        return redirect("index")  # Change to your actual view name
+        generate_with_ai = request.POST.get("generate_with_ai") == "on"
+        topic = request.POST.get("topic", "")
+        num_flashcards = int(request.POST.get("num_flashcards", 5))
+
+        # Create the flashcard set
+        flashcard_set = FlashcardSet.objects.create(
+            title=title,
+            description=description,
+            created_by=request.user
+        )
+
+        # If AI generation is requested
+        if generate_with_ai and topic:
+            try:
+                # Prompt still asks for JSON, but we rely on mime type for formatting
+                prompt = f"""Create {num_flashcards} flashcards about {topic}.
+                Each flashcard should have a clear question (front) and concise answer (back).
+                Format the response as a JSON array of objects, each with "front" and "back" keys.
+                Example: [{{"front": "What is SQL?", "back": "Structured Query Language"}}]"""
+
+                # Call Gemini API using requests
+                response = requests.post(
+                    GEMINI_API_URL + f"?key={GEMINI_API_KEY}",
+                    headers={
+                        "Content-Type": "application/json"
+                    },
+                    json={
+                        "contents": [{"parts": [{"text": prompt}]}],
+                        "generationConfig": {
+                            "temperature": 0.7,
+                            "response_mime_type": "application/json",
+                        },
+                        "safetySettings": [
+                            {
+                                "category": "HARM_CATEGORY_HARASSMENT",
+                                "threshold": "BLOCK_MEDIUM_AND_ABOVE"
+                            },
+                            {
+                                "category": "HARM_CATEGORY_HATE_SPEECH",
+                                "threshold": "BLOCK_MEDIUM_AND_ABOVE"
+                            },
+                            {
+                                "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                                "threshold": "BLOCK_MEDIUM_AND_ABOVE"
+                            },
+                            {
+                                "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+                                "threshold": "BLOCK_MEDIUM_AND_ABOVE"
+                            }
+                        ]
+                    }
+                )
+
+                response.raise_for_status()  # Raise an exception for HTTP errors
+                gemini_data = response.json()
+
+                # Extract the generated text
+                if (gemini_data and "candidates" in gemini_data and
+                        len(gemini_data["candidates"]) > 0 and
+                        "content" in gemini_data["candidates"][0] and
+                        "parts" in gemini_data["candidates"][0]["content"] and
+                        len(gemini_data["candidates"][0]["content"]["parts"]) > 0 and
+                        "text" in gemini_data["candidates"][0]["content"]["parts"][0]):
+
+                    gemini_output = gemini_data["candidates"][0]["content"]["parts"][0]["text"]
+
+                    # Attempt to parse the JSON response
+                    try:
+                        flashcards_data = json.loads(gemini_output)
+
+                        if isinstance(flashcards_data, list):
+                            for card_data in flashcards_data:
+                                if isinstance(card_data, dict):
+                                    Flashcard.objects.create(
+                                        front=card_data.get("front", ""),
+                                        back=card_data.get("back", ""),
+                                        flashcard_set=flashcard_set
+                                    )
+                                else:
+                                    print(f"Skipping non-dictionary item in flashcard list: {card_data}")
+                        else:
+                            # Log if the structure isn't the expected list
+                            print(f"Unexpected JSON structure: Expected a list, got {type(flashcards_data)}")
+                            print(f"Gemini output was: {gemini_output}")
+
+                    except json.JSONDecodeError as e:
+                        # In case the JSON is malformed or the API didn't respect the mime type for some reason
+                        print(f"Error decoding JSON from Gemini output (despite requesting JSON mime type): {e}")
+                        print(f"Gemini output received: {gemini_output}")
+                else:
+                    print("No valid text content found in Gemini API response.")
+                    print(f"Full Gemini response data: {gemini_data}")
+
+            except requests.exceptions.RequestException as e:
+                print(f"Error during Gemini API request: {e}")
+            except Exception as e:
+                print(f"An unexpected error occurred during AI generation: {str(e)}")
+
+        return redirect("index")
+
     return render(request, "index.html")
 
 
