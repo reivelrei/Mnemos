@@ -2,355 +2,224 @@
 {% block title %}Home{% endblock %}
 {% block content %}
 
-    <style>
-        .list-group-item:hover {
-            background-color: rgba(255, 255, 255, 0.1);
-            transition: background-color 0.2s ease-in-out;
-        }
 
-        a {
-            color: #ddd;
-        }
+    <!-- Flashcard Sets -->
+    <ul class="bg-base-100 rounded-box shadow-md divide-y divide-base-300 max-w-3xl mx-auto mt-20">
+        <li class="p-5 text-sm uppercase tracking-wide opacity-60">Your Flashcard Sets</li>
 
-        .form-check-input:checked {
-            background-color: rgba(32, 201, 151, 0.7);
-            border-color: rgba(32, 201, 151, 0.9);
-        }
-
-        .form-check-input:focus {
-            border-color: rgba(32, 201, 151, 0.7);
-            box-shadow: 0 0 0 .25rem rgba(32, 201, 151, 0.25);
-        }
-
-        .form-check-input:focus {
-            border-color: rgba(255, 255, 255, 0.1);
-            outline: 0;
-            box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.1);
-            background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='rgba(0,0,0,0.25)'/></svg>");
-        }
-    </style>
-
-    <!-- List of Flashcard Sets -->
-    <div class="list-group" data-bs-theme="dark">
         {% for flashcard_set in flashcard_sets %}
-            <div class="list-group-item d-flex align-items-center justify-content-between position-relative">
-
-                <!-- Check if the flashcard set has at least one flashcard -->
-                {% if flashcard_set.flashcard_set.exists %}
-                    <a href="{% url 'flashcard-detail' flashcard_set.flashcard_set.first.id %}"
-                       class="stretched-link text-decoration-none">
-                {% else %}
-                    <a href="" class="stretched-link text-decoration-none disabled">
-                {% endif %}
-
-                <div>
-                    <h5 class="mb-1">{{ flashcard_set.title }}</h5>
-                    <p class="mb-1">{{ flashcard_set.description }}</p>
-                    <small class="text-muted">Created by: {{ flashcard_set.created_by.username }}
-                        | {{ flashcard_set.created_at|date:"M d, Y" }}</small>
+            <li class="list-row flex items-center justify-between gap-6 px-5 py-4">
+                <div class="flex flex-col gap-1">
+                    {% if flashcard_set.flashcard_set.exists %}
+                        <a href="{% url 'flashcard-detail' flashcard_set.flashcard_set.first.id %}"
+                           class="text-lg font-semibold hover:underline">
+                            {{ flashcard_set.title }}
+                        </a>
+                    {% else %}
+                        <span class="text-lg text-gray-400">{{ flashcard_set.title }}</span>
+                    {% endif %}
+                    <p class="text-base opacity-80">{{ flashcard_set.description }}</p>
+                    <small class="text-sm opacity-60">By {{ flashcard_set.created_by.username }}
+                        on {{ flashcard_set.created_at|date:"M d, Y" }}</small>
                 </div>
-                </a>
 
-                <!-- Buttons -->
-                <div class="d-flex align-items-center gap-2 z-1">
-                    <button class="btn btn-outline-secondary btn-sm delete-flashcard-set"
+                <div class="flex items-center gap-3">
+                    <button class="btn btn-square btn-ghost btn-md delete-flashcard-set"
                             data-flashcard-set-id="{{ flashcard_set.id }}">
-                        <i class="bi bi-trash"></i>
+                        <i class="bi bi-trash text-lg"></i>
                     </button>
-                    <button class="btn btn-outline-secondary btn-sm edit-flashcard-set"
+                    <button class="btn btn-square btn-ghost btn-md edit-flashcard-set"
                             data-flashcard-set-id="{{ flashcard_set.id }}">
-                        <i class="bi bi-gear"></i>
+                        <i class="bi bi-gear text-lg"></i>
                     </button>
-                    <a href="#" class="btn btn-primary btn-sm add-flashcard-btn"
-                       data-flashcard-set-id="{{ flashcard_set.id }}">Add Flashcards</a>
+
+                    <a href="#" class="btn btn-primary btn-md add-flashcard-btn"
+                       data-flashcard-set-id="{{ flashcard_set.id }}">
+                        Add
+                    </a>
                 </div>
-            </div>
+            </li>
         {% empty %}
-            <div class="list-group-item">
-                <p class="mb-0">No flashcard sets available.</p>
-            </div>
+            <li class="px-5 py-8 text-center text-gray-400 text-base">No flashcard sets available.</li>
         {% endfor %}
+    </ul>
+
+
+    <!-- Create Set Button -->
+    <div class="max-w-3xl mx-auto mt-6">
+        <label for="addFlashcardSetModal" class="btn btn-secondary">
+            + Create New Set
+        </label>
     </div>
-    </br>
-    <button type="button" class="btn btn-success add-flashcard-set">
-        Create Set
-    </button>
 
 
-    <!-- Modal for Editing Flashcard Set -->
-    <div class="modal fade" id="editFlashcardSetModal" tabindex="-1" aria-labelledby="editFlashcardSetModalLabel"
-         aria-hidden="true" data-bs-theme="dark">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title text-light" id="editFlashcardSetModalLabel">Edit Flashcard Set</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <!-- Form for Editing Flashcard Set -->
-                    <form id="editFlashcardSetForm" method="post">
-                        {% csrf_token %}
-                        <div class="mb-3">
-                            <label for="editTitle" class="form-label text-light">Title</label>
-                            <input type="text" class="form-control" id="editTitle" name="title" required>
+    <!-- Add Modal -->
+    <input type="checkbox" id="addFlashcardSetModal" class="modal-toggle">
+    <div class="modal">
+        <div class="modal-box relative">
+            <label for="addFlashcardSetModal" class="btn btn-sm btn-circle absolute right-2 top-2">✕</label>
+            <h3 class="font-bold text-lg">Add Flashcard Set</h3>
+            <form id="addFlashcardSetForm" method="post" action="{% url 'add-flashcard-set' %}" class="space-y-4 mt-4">
+                {% csrf_token %}
+                <input type="text" name="title" placeholder="Title" class="input input-bordered w-full" required>
+                <textarea name="description" placeholder="Description" rows="3"
+                          class="textarea textarea-bordered w-full" required></textarea>
+
+                <div class="bg-base-100 border border-success rounded-lg p-3 flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <i class="bi bi-robot text-success text-xl"></i>
+                        <div>
+                            <h6 class="font-semibold">AI Flashcard Generator</h6>
+                            <p class="text-xs text-gray-500">Let AI help you!</p>
                         </div>
-                        <div class="mb-3">
-                            <label for="editDescription" class="form-label text-light">Description</label>
-                            <textarea class="form-control" id="editDescription" name="description" rows="3"
-                                      required></textarea>
-                        </div>
-                    </form>
+                    </div>
+                    <input type="checkbox" class="toggle toggle-success" id="aiToggle" name="generate_with_ai">
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="submit" form="editFlashcardSetForm" class="btn btn-primary">Save changes</button>
+
+                <div id="aiFields" style="display: none;">
+                    <input type="text" name="topic" placeholder="Topic (e.g. SQL)" id="topicInput"
+                           class="input input-bordered w-full mt-2">
+                    <select name="num_flashcards" id="numFlashcardsInput" class="select select-bordered w-full mt-2">
+                        <option value="5">5</option>
+                        <option value="10" selected>10</option>
+                        <option value="15">15</option>
+                        <option value="20">20</option>
+                    </select>
                 </div>
-            </div>
+
+                <div class="modal-action">
+                    <label for="addFlashcardSetModal" class="btn">Close</label>
+                    <button type="submit" class="btn btn-primary">Save Set</button>
+                </div>
+            </form>
         </div>
     </div>
 
-    <!-- Modal for Adding Flashcard Set -->
-    <div class="modal fade" id="addFlashcardSetModal" tabindex="-1" aria-labelledby="addFlashcardSetModalLabel"
-         aria-hidden="true" data-bs-theme="dark">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title text-light" id="addFlashcardSetModalLabel">Add Flashcard Set</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+    <!-- Edit Modal -->
+    <input type="checkbox" id="editFlashcardSetModalToggle" class="modal-toggle">
+    <div class="modal">
+        <div class="modal-box relative">
+            <label for="editFlashcardSetModalToggle" class="btn btn-sm btn-circle absolute right-2 top-2">✕</label>
+            <h3 class="font-bold text-lg">Edit Flashcard Set</h3>
+            <form id="editFlashcardSetForm" method="post" class="space-y-4 mt-4">
+                {% csrf_token %}
+                <input type="text" name="title" id="editTitle" class="input input-bordered w-full" required>
+                <textarea name="description" id="editDescription" rows="3" class="textarea textarea-bordered w-full"
+                          required></textarea>
+                <div class="modal-action">
+                    <label for="editFlashcardSetModalToggle" class="btn">Cancel</label>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
                 </div>
-                <div class="modal-body">
-                    <form id="addFlashcardSetForm" method="post" action="{% url 'add-flashcard-set' %}">
-                        {% csrf_token %}
-                        <div class="mb-3">
-                            <label for="addTitle" class="form-label text-light">Title</label>
-                            <input type="text" class="form-control" id="addTitle" name="title" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="addDescription" class="form-label text-light">Description</label>
-                            <textarea class="form-control" id="addDescription" name="description" rows="3"
-                                      required></textarea>
-                        </div>
-
-                        <!-- AI Generation Toggle -->
-                        <div class="mb-3">
-                            <div class="d-flex align-items-center justify-content-between p-3 rounded-3"
-                                 style="background: rgba(32, 201, 151, 0.1); border: 1px solid rgba(32, 201, 151, 0.3);">
-                                <div class="d-flex align-items-center">
-                                    <i class="bi bi-robot fs-4 me-3" style="color: #20c997;"></i>
-                                    <div>
-                                        <h6 class="mb-0 text-light">AI Flashcard Generator</h6>
-                                        <small class="text-muted">Let AI help you!</small>
-                                    </div>
-                                </div>
-                                <div class="form-check form-switch m-0">
-                                    <input class="form-check-input" type="checkbox" role="switch"
-                                           id="aiToggle" name="generate_with_ai" style="width: 3em; height: 1.5em;">
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- AI Generation Fields -->
-                        <div id="aiFields" style="display: none;">
-                            <div class="mb-3">
-                                <label for="topicInput" class="form-label text-light">Topic</label>
-                                <input type="text" class="form-control" id="topicInput" name="topic"
-                                       placeholder="e.g., SQL, C++, ...">
-                            </div>
-                            <div class="mb-3">
-                                <label for="numFlashcardsInput" class="form-label text-light">Number of
-                                    Flashcards</label>
-                                <select class="form-select" id="numFlashcardsInput" name="num_flashcards">
-                                    <option value="5">5</option>
-                                    <option value="10" selected>10</option>
-                                    <option value="15">15</option>
-                                    <option value="20">20</option>
-                                </select>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="submit" form="addFlashcardSetForm" class="btn btn-primary">Save Set</button>
-                </div>
-            </div>
+            </form>
         </div>
     </div>
 
     <!-- Add Flashcard Modal -->
-    <div class="modal fade" id="addFlashcardModal" tabindex="-1" aria-labelledby="addFlashcardModalLabel"
-         aria-hidden="true" data-bs-theme="dark">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title text-light" id="addFlashcardModalLabel">Add Flashcard</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+    <input type="checkbox" id="addFlashcardModal" class="modal-toggle">
+    <div class="modal">
+        <div class="modal-box relative">
+            <label for="addFlashcardModal" class="btn btn-sm btn-circle absolute right-2 top-2">✕</label>
+            <h3 class="font-bold text-lg">Add Flashcard</h3>
+            <form id="addFlashcardForm" method="post" action="" class="space-y-4 mt-4">
+                {% csrf_token %}
+                <input type="text" name="front" id="flashcardFront" placeholder="Front"
+                       class="input input-bordered w-full" required>
+                <input type="text" name="back" id="flashcardBack" placeholder="Back" class="input input-bordered w-full"
+                       required>
+                <div class="modal-action">
+                    <label for="addFlashcardModal" class="btn">Cancel</label>
+                    <button type="submit" class="btn btn-primary">Save Flashcard</button>
                 </div>
-                <div class="modal-body">
-                    <!-- Form for Adding Flashcard -->
-                    <form id="addFlashcardForm" method="post" action="">
-                        {% csrf_token %}
-                        <div class="mb-3">
-                            <label for="flashcardFront" class="form-label text-light">Front</label>
-                            <input type="text" class="form-control" id="flashcardFront" name="front" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="flashcardBack" class="form-label text-light">Back</label>
-                            <input type="text" class="form-control" id="flashcardBack" name="back" required>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="submit" form="addFlashcardForm" class="btn btn-primary">Save Flashcard</button>
-                </div>
-            </div>
+            </form>
         </div>
     </div>
 
-
-
     <script>
         document.addEventListener("DOMContentLoaded", function () {
-            console.log("JavaScript Loaded");
-
-            // Edit Flashcard Set Modal
             const gearButtons = document.querySelectorAll(".edit-flashcard-set");
             gearButtons.forEach(button => {
-                button.addEventListener("click", function (event) {
-                    event.preventDefault();
-                    console.log("Edit button clicked");
-
-                    const listItem = button.closest(".list-group-item");
-                    const title = listItem.querySelector("h5").innerText;
-                    const description = listItem.querySelector("p").innerText;
-                    const flashcardSetId = button.getAttribute("data-flashcard-set-id");
+                button.addEventListener("click", function (e) {
+                    e.preventDefault();
+                    const card = button.closest("li");
+                    const title = card.querySelector("a, span").textContent.trim();
+                    const description = card.querySelector("p").textContent.trim();
+                    const id = button.dataset.flashcardSetId;
 
                     document.getElementById("editTitle").value = title;
                     document.getElementById("editDescription").value = description;
-                    document.getElementById("editFlashcardSetForm").action = `/flashcards/edit-flashcard-set/${flashcardSetId}/`;
-
-                    const modal = new bootstrap.Modal(document.getElementById("editFlashcardSetModal"));
-                    modal.show();
+                    document.getElementById("editFlashcardSetForm").action = `/flashcards/edit-flashcard-set/${id}/`;
+                    document.getElementById("editFlashcardSetModalToggle").checked = true;
                 });
             });
 
-            // Add Flashcard Set Modal
-            const addButton = document.querySelectorAll(".add-flashcard-set");
-            addButton.forEach(button => {
-                button.addEventListener("click", function (event) {
-                    event.preventDefault();
-                    console.log("Add button clicked");
-
-                    const modal = new bootstrap.Modal(document.getElementById("addFlashcardSetModal"));
-                    modal.show();
+            document.querySelectorAll(".add-flashcard-set").forEach(button => {
+                button.addEventListener("click", e => {
+                    e.preventDefault();
+                    document.getElementById("addFlashcardSetModal").checked = true;
                 });
             });
 
-
-            // Open Add Flashcard Modal
             document.querySelectorAll(".add-flashcard-btn").forEach(button => {
-                button.addEventListener("click", function (event) {
-                    event.preventDefault();
-                    console.log("Add Flashcard button clicked");
-
-                    const flashcardSetId = button.getAttribute("data-flashcard-set-id");
-                    document.getElementById("addFlashcardForm").action = `/flashcards/add-flashcard/${flashcardSetId}/`;
-
-                    // Show the modal
-                    const modal = new bootstrap.Modal(document.getElementById("addFlashcardModal"));
-                    modal.show();
+                button.addEventListener("click", e => {
+                    e.preventDefault();
+                    const id = button.dataset.flashcardSetId;
+                    document.getElementById("addFlashcardForm").action = `/flashcards/add-flashcard/${id}/`;
+                    document.getElementById("addFlashcardModal").checked = true;
                 });
             });
 
-            // Handle Form Submission via AJAX
-            // AJAX faciliates several additions of flashcards
-            document.getElementById("addFlashcardForm").addEventListener("submit", function (event) {
-                event.preventDefault();  // Prevent default form submission
-                console.log("Submitting flashcard form via AJAX");
-
+            document.getElementById("addFlashcardForm").addEventListener("submit", function (e) {
+                e.preventDefault();
                 const form = this;
-                const formData = new FormData(form);
-                const actionUrl = form.action;
+                const data = new FormData(form);
 
-                fetch(actionUrl, {
+                fetch(form.action, {
                     method: "POST",
-                    body: formData,
-                    headers: {
-                        "X-Requested-With": "XMLHttpRequest"  // Mark request as AJAX
-                    }
+                    body: data,
+                    headers: {"X-Requested-With": "XMLHttpRequest"}
                 })
-                    .then(response => response.json())
+                    .then(res => res.json())
                     .then(data => {
-                        if (data.success) {
-                            console.log("Flashcard added successfully!");
-
-                            // Clear form fields for next input
-                            form.reset();
-                        } else {
-                            console.error("Error adding flashcard:", data.error);
-                        }
+                        if (data.success) form.reset();
+                        else console.error(data.error);
                     })
-                    .catch(error => {
-                        console.error("AJAX error:", error);
-                    });
+                    .catch(err => console.error("Error:", err));
             });
 
-
-            // Handle Flashcard Set Deletion
-            const deleteButtons = document.querySelectorAll("button.delete-flashcard-set");
-            deleteButtons.forEach(button => {
-                button.addEventListener("click", function (event) {
-                    event.preventDefault();
-                    console.log("Delete button clicked");
-
-                    const flashcardSetId = button.getAttribute("data-flashcard-set-id");
-
-                    if (!confirm("Are you sure you want to delete this flashcard set and all flashcards within?")) {
-                        return;  // Stop execution if user cancels
-                    }
-
-                    fetch(`/flashcards/delete-flashcard-set/${flashcardSetId}/`, {
-                        method: "POST",
-                        headers: {
-                            "X-Requested-With": "XMLHttpRequest",
-                            "X-CSRFToken": "{{ csrf_token }}"  // Pass CSRF token
-                        }
-                    })
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.redirect_url) {
-                                window.location.href = data.redirect_url;  // Redirect user
-                            } else {
-                                console.error("No redirect URL received.");
-                            }
-                        })
-                        .catch(error => console.error("Error deleting flashcard set:", error));
-                });
-            });
-
-            // Toggle AI fields visibility
             const aiToggle = document.getElementById("aiToggle");
             const aiFields = document.getElementById("aiFields");
-
-            if (aiToggle && aiFields) {
-                aiToggle.addEventListener("change", function () {
-                    aiFields.style.display = this.checked ? "block" : "none";
-                    // Make topic required when AI is enabled
-                    document.getElementById("topicInput").required = this.checked;
+            if (aiToggle) {
+                aiToggle.addEventListener("change", () => {
+                    aiFields.style.display = aiToggle.checked ? "block" : "none";
+                    document.getElementById("topicInput").required = aiToggle.checked;
                 });
             }
 
-            // Modify the form submission to handle AI generation
-            document.getElementById("addFlashcardSetForm")?.addEventListener("submit", function (e) {
-                const aiEnabled = document.getElementById("aiToggle").checked;
-                const topicInput = document.getElementById("topicInput");
-
-                if (aiEnabled && !topicInput.value.trim()) {
+            document.getElementById("addFlashcardSetForm").addEventListener("submit", e => {
+                if (aiToggle.checked && !document.getElementById("topicInput").value.trim()) {
                     e.preventDefault();
-                    alert("Please enter a topic for AI set generation");
-                    topicInput.focus();
+                    alert("Please enter a topic for AI set generation.");
                 }
+            });
+
+            document.querySelectorAll(".delete-flashcard-set").forEach(button => {
+                button.addEventListener("click", e => {
+                    e.preventDefault();
+                    const id = button.dataset.flashcardSetId;
+                    if (!confirm("Delete this flashcard set and all flashcards?")) return;
+
+                    fetch(`/flashcards/delete-flashcard-set/${id}/`, {
+                        method: "POST",
+                        headers: {
+                            "X-CSRFToken": "{{ csrf_token }}",
+                            "X-Requested-With": "XMLHttpRequest"
+                        }
+                    })
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.redirect_url) location.href = data.redirect_url;
+                        });
+                });
             });
         });
     </script>
