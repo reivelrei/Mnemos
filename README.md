@@ -11,12 +11,12 @@ A powerful and intelligent flashcard application built with Django to enhance le
 - **Smart Learning Algorithm**:
   - Optimized review scheduling to reinforce learning effectively.
 - **AI-Powered Flashcard Creation**:
-  - Generate flashcards quickly using AI to save time and improve content quality.
+  - Generate flashcards sets quickly using AI to save time and improve content quality.
 
 ## Technologies Used
 - Django (Python) - Backend framework
 - SQLite - Database management
-- DeepSeek Integration - AI-assisted flashcard creation
+- Gemini API Integration - AI-assisted flashcard creation
 - HTML, CSS, JavaScript - Frontend
 
 ## Installation
@@ -40,7 +40,7 @@ A powerful and intelligent flashcard application built with Django to enhance le
    python manage.py runserver
    ```
 5. **Access the App**
-   Open `http://127.0.0.1:8000/flashcards` in your browser.
+   Open `http://127.0.0.1:8000` in your browser.
 
 ## Usage
 1. Register or log in to your account.
