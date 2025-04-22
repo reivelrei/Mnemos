@@ -218,14 +218,52 @@
                 });
             }
 
+            // Add this for instant file validation
+            pdfFileInput.addEventListener('change', function () {
+                if (this.files.length > 0) {
+                    const pdfFile = this.files[0];
+                    const maxSize = 2.5 * 1024 * 1024; // 2.5MB
+
+                    if (!pdfFile.type.includes('pdf')) {
+                        alert("Please upload a valid PDF file.");
+                        this.value = '';
+                        return;
+                    }
+
+                    if (pdfFile.size > maxSize) {
+                        alert("PDF file size must be less than 5MB.");
+                        this.value = '';
+                        return;
+                    }
+                }
+            });
+
+            // Form submission validation
             document.getElementById("addFlashcardSetForm").addEventListener("submit", e => {
                 if (aiToggle.checked) {
                     const hasTopic = topicInput.value.trim() !== "";
                     const hasPdf = pdfFileInput.files.length > 0;
+                    const errors = [];
 
                     if (!hasTopic && !hasPdf) {
+                        errors.push("Please enter a topic or upload a PDF");
+                    }
+
+                    if (hasPdf) {
+                        const pdfFile = pdfFileInput.files[0];
+
+                        if (!pdfFile.type.includes('pdf')) {
+                            errors.push("Invalid file type (must be PDF)");
+                        }
+
+                        if (pdfFile.size > 2.5 * 1024 * 1024) {
+                            errors.push("PDF must be smaller than 5MB");
+                        }
+                    }
+
+                    if (errors.length > 0) {
                         e.preventDefault();
-                        alert("Please enter a topic or upload a PDF for AI flashcard generation.");
+                        alert("Please fix these issues:\n" + errors.join("\n"));
                     }
                 }
             });
