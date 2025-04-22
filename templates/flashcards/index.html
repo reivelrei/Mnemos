@@ -253,14 +253,12 @@
                         return res.json();
                     })
                     .then(data => {
-                        if (data && data.success) {
-                            form.reset();
-                            if (aiToggleSingle) aiToggleSingle.checked = false;
-                            if (aiFieldsSingle) aiFieldsSingle.style.display = 'none';
-                            if (manualFields) manualFields.style.display = 'block';
-
-                            // Close modal if it's a single flashcard add
-                            document.getElementById("addFlashcardModal").checked = false;
+                        if (data && data.status === "success") {
+                            document.getElementById("flashcardFront").value = "";
+                            document.getElementById("flashcardBack").value = "";
+                            document.getElementById("topicInputSingle").value = "";
+                            document.getElementById("pdfFileInputSingle").value = "";
+                            document.getElementById("numFlashcardsInputSingle").value = "1";
 
                             // Optionally refresh the page or update UI
                             if (data.redirect_url) {

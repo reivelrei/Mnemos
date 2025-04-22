@@ -1,4 +1,6 @@
 import os
+
+from django.contrib import messages
 from dotenv import load_dotenv
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse, HttpResponse
@@ -43,6 +45,7 @@ def flashcard_view(request, flashcard_id):
 
 @login_required
 def edit_flashcard_set(request, flashcard_set_id):
+    messages.success(request, f"Edit Flashcard Set aufgerufen!")
     if request.method == "POST":
         # Fetch the flashcard set
         flashcard_set = get_object_or_404(FlashcardSet, id=flashcard_set_id, created_by=request.user)
@@ -86,7 +89,7 @@ def add_flashcard(request, flashcard_set_id):
                 success, result = handle_ai_generation(request, flashcard_set, form_data, is_flashcard_set=False)
                 if not success:
                     return JsonResponse(result, status=400)
-                return JsonResponse(result)
+                return JsonResponse({"status": "success", "count": result["count"]})
 
             # Manual creation
             Flashcard.objects.create(
