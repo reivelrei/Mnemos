@@ -127,10 +127,40 @@
             <h3 class="font-bold text-lg">Add Flashcard</h3>
             <form id="addFlashcardForm" method="post" action="" class="space-y-4 mt-4">
                 {% csrf_token %}
-                <input type="text" name="front" id="flashcardFront" placeholder="Front"
-                       class="input input-bordered w-full" required>
-                <input type="text" name="back" id="flashcardBack" placeholder="Back" class="input input-bordered w-full"
-                       required>
+                <div id="manualFields">
+                    <input type="text" name="front" id="flashcardFront" placeholder="Front"
+                           class="input input-bordered w-full" required>
+                    <input type="text" name="back" id="flashcardBack" placeholder="Back"
+                           class="input input-bordered w-full"
+                           required>
+                </div>
+
+                <div class="bg-base-100 border border-success rounded-lg p-3 flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <i class="bi bi-robot text-success text-xl"></i>
+                        <div>
+                            <h6 class="font-semibold">AI Flashcard Generator</h6>
+                            <p class="text-xs text-gray-500">Let AI help you!</p>
+                        </div>
+                    </div>
+                    <input type="checkbox" class="toggle toggle-success" id="aiToggleSingle" name="generate_with_ai">
+                </div>
+
+                <div id="aiFieldsSingle" style="display: none;">
+                    <input type="text" name="topic" placeholder="Topic (e.g. SQL)" id="topicInputSingle"
+                           class="input input-bordered w-full mt-2">
+
+                    <input type="file" name="pdf_file" id="pdfFileInputSingle" accept="application/pdf"
+                           class="file-input file-input-bordered w-full mt-2"/>
+
+                    <select name="num_flashcards" id="numFlashcardsInputSingle"
+                            class="select select-bordered w-full mt-2">
+                        <option value="1" selected>1</option>
+                        <option value="3">3</option>
+                        <option value="5">5</option>
+                    </select>
+                </div>
+
                 <div class="modal-action">
                     <label for="addFlashcardModal" class="btn">Cancel</label>
                     <button type="submit" class="btn btn-primary">Save Flashcard</button>
@@ -172,23 +202,79 @@
                     document.getElementById("addFlashcardModal").checked = true;
                 });
             });
-            
+
             document.getElementById("addFlashcardForm").addEventListener("submit", function (e) {
                 e.preventDefault();
                 const form = this;
                 const data = new FormData(form);
 
+                // Validation for AI generation
+                if (aiToggleSingle && aiToggleSingle.checked) {
+                    const hasTopic = topicInputSingle.value.trim() !== "";
+                    const hasPdf = pdfFileInputSingle.files.length > 0;
+                    const errors = [];
+
+                    if (!hasTopic && !hasPdf) {
+                        errors.push("Please enter a topic or upload a PDF");
+                    }
+
+                    if (hasPdf) {
+                        const pdfFile = pdfFileInputSingle.files[0];
+                        if (!pdfFile.type.includes('pdf')) {
+                            errors.push("Invalid file type (must be PDF)");
+                        }
+                        if (pdfFile.size > 2.5 * 1024 * 1024) {
+                            errors.push("PDF must be smaller than 5MB");
+                        }
+                    }
+
+                    if (errors.length > 0) {
+                        alert("Please fix these issues:\n" + errors.join("\n"));
+                        return;
+                    }
+                }
+
+                // Get CSRF token from the form
+                const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
                 fetch(form.action, {
                     method: "POST",
                     body: data,
-                    headers: {"X-Requested-With": "XMLHttpRequest"}
+                    headers: {
+                        "X-CSRFToken": csrfToken,
+                        "X-Requested-With": "XMLHttpRequest"
+                    }
                 })
-                    .then(res => res.json())
-                    .then(data => {
-                        if (data.success) form.reset();
-                        else console.error(data.error);
+                    .then(res => {
+                        if (res.redirected) {
+                            window.location.href = res.url;
+                            return;
+                        }
+                        return res.json();
                     })
-                    .catch(err => console.error("Error:", err));
+                    .then(data => {
+                        if (data && data.success) {
+                            form.reset();
+                            if (aiToggleSingle) aiToggleSingle.checked = false;
+                            if (aiFieldsSingle) aiFieldsSingle.style.display = 'none';
+                            if (manualFields) manualFields.style.display = 'block';
+
+                            // Close modal if it's a single flashcard add
+                            document.getElementById("addFlashcardModal").checked = false;
+
+                            // Optionally refresh the page or update UI
+                            if (data.redirect_url) {
+                                window.location.href = data.redirect_url;
+                            }
+                        } else if (data && data.error) {
+                            console.error(data.error);
+                            alert(data.error);
+                        }
+                    })
+                    .catch(err => {
+                        console.error("Error:", err);
+                        alert("An error occurred. Please try again.");
+                    });
             });
 
             document.getElementById("addFlashcardSetForm").addEventListener("submit", function (e) {
@@ -223,6 +309,7 @@
                     .catch(err => console.error("Error:", err));
             });
 
+            // AI Toggle for Flashcard Set
             const aiToggle = document.getElementById("aiToggle");
             const aiFields = document.getElementById("aiFields");
             const topicInput = document.getElementById("topicInput");
@@ -234,6 +321,44 @@
                     topicInput.required = false;
                 });
             }
+
+            // AI Toggle for Single Flashcard
+            const aiToggleSingle = document.getElementById("aiToggleSingle");
+            const aiFieldsSingle = document.getElementById("aiFieldsSingle");
+            const manualFields = document.getElementById("manualFields");
+            const topicInputSingle = document.getElementById("topicInputSingle");
+            const pdfFileInputSingle = document.getElementById("pdfFileInputSingle");
+
+            if (aiToggleSingle) {
+                aiToggleSingle.addEventListener("change", () => {
+                    aiFieldsSingle.style.display = aiToggleSingle.checked ? "block" : "none";
+                    manualFields.style.display = aiToggleSingle.checked ? "none" : "block";
+
+                    // Toggle required attributes
+                    document.getElementById("flashcardFront").required = !aiToggleSingle.checked;
+                    document.getElementById("flashcardBack").required = !aiToggleSingle.checked;
+                });
+            }
+
+            // PDF validation for single flashcard
+            pdfFileInputSingle.addEventListener('change', function () {
+                if (this.files.length > 0) {
+                    const pdfFile = this.files[0];
+                    const maxSize = 2.5 * 1024 * 1024; // 2.5MB
+
+                    if (!pdfFile.type.includes('pdf')) {
+                        alert("Please upload a valid PDF file.");
+                        this.value = '';
+                        return;
+                    }
+
+                    if (pdfFile.size > maxSize) {
+                        alert("PDF file size must be less than 5MB.");
+                        this.value = '';
+                        return;
+                    }
+                }
+            });
 
             // Add this for instant file validation
             pdfFileInput.addEventListener('change', function () {
@@ -283,6 +408,15 @@
                         alert("Please fix these issues:\n" + errors.join("\n"));
                     }
                 }
+            });
+
+            // Refresh page when modal is closed via Cancel or X button
+            document.querySelectorAll('[for="addFlashcardModal"], [for="addFlashcardModal"] + .modal-action .btn:not(.btn-primary)').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    setTimeout(() => {
+                        location.reload(); // Refresh after a short delay to ensure modal is closed
+                    }, 100);
+                });
             });
 
             document.querySelectorAll(".delete-flashcard-set").forEach(button => {

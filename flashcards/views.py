@@ -75,29 +75,31 @@ def edit_flashcard(request, flashcard_id):
 @login_required
 def add_flashcard(request, flashcard_set_id):
     if request.method == "POST":
-        flashcard_set = get_object_or_404(FlashcardSet, id=flashcard_set_id)
+        try:
+            form_data = extract_and_validate_form_data(request, is_flashcard_set=False)
+            if not isinstance(form_data, dict):
+                return form_data  # Returns JsonResponse if validation fails
 
-        # Get form data
-        front = request.POST.get("front")
-        back = request.POST.get("back")
+            flashcard_set = get_object_or_404(FlashcardSet, id=flashcard_set_id, created_by=request.user)
 
-        # Create and save new flashcard
-        flashcard = Flashcard.objects.create(
-            front=front,
-            back=back,
-            flashcard_set=flashcard_set
-        )
+            if form_data["generate_with_ai"]:
+                success, result = handle_ai_generation(request, flashcard_set, form_data, is_flashcard_set=False)
+                if not success:
+                    return JsonResponse(result, status=400)
+                return JsonResponse(result)
 
-        # Return JSON response instead of redirecting
-        return JsonResponse({
-            "success": True,
-            "flashcard": {
-                "front": flashcard.front,
-                "back": flashcard.back
-            }
-        })
+            # Manual creation
+            Flashcard.objects.create(
+                front=form_data["front"],
+                back=form_data["back"],
+                flashcard_set=flashcard_set
+            )
+            return JsonResponse({"status": "success", "count": 1})
 
-    return JsonResponse({"success": False, "error": "Invalid request"}, status=400)
+        except Exception as e:
+            return JsonResponse({"status": "error", "message": str(e)}, status=500)
+
+    return JsonResponse({"status": "error", "message": "Invalid method"}, status=405)
 
 
 @login_required
@@ -131,7 +133,7 @@ def delete_flashcard(request, flashcard_id):
 def add_flashcard_set(request):
     if request.method == "POST":
         # Extract and validate form data
-        form_data = extract_and_validate_form_data(request)
+        form_data = extract_and_validate_form_data(request, is_flashcard_set=True)
         if isinstance(form_data, HttpResponse):
             return form_data  # Returns redirect if validation fails
 
