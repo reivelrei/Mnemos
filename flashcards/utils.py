@@ -110,7 +110,7 @@ def extract_text_for_ai(request, form_data):
                 text_for_ai = "\n".join([page.get_text() for page in doc])
         except Exception as e:
             print(f"Error processing PDF: {e}")
-            messages.warning(request, "PDF processing failed, using topic text only")
+            messages.warning(request, "PDF processing failed, using topic text instead.")
             text_for_ai = form_data["topic"] if form_data["topic"] else ""
 
     return text_for_ai

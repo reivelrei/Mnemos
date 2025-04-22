@@ -54,7 +54,7 @@
         </div>
     </div>
 
-    <!-- Add Modal -->
+    <!-- Add Flashcard Set Modal -->
     <input type="checkbox" id="addFlashcardSetModal" class="modal-toggle">
     <div class="modal">
         <div class="modal-box relative">
@@ -125,8 +125,7 @@
         <div class="modal-box relative">
             <label for="addFlashcardModal" class="btn btn-sm btn-circle absolute right-2 top-2">✕</label>
             <h3 class="font-bold text-lg">Add Flashcard</h3>
-            <form id="addFlashcardSetForm" method="post" action="{% url 'add-flashcard-set' %}"
-                  enctype="multipart/form-data" class="space-y-4 mt-4">
+            <form id="addFlashcardForm" method="post" action="" class="space-y-4 mt-4">
                 {% csrf_token %}
                 <input type="text" name="front" id="flashcardFront" placeholder="Front"
                        class="input input-bordered w-full" required>
@@ -172,6 +171,24 @@
                     document.getElementById("addFlashcardForm").action = `/flashcards/add-flashcard/${id}/`;
                     document.getElementById("addFlashcardModal").checked = true;
                 });
+            });
+            
+            document.getElementById("addFlashcardForm").addEventListener("submit", function (e) {
+                e.preventDefault();
+                const form = this;
+                const data = new FormData(form);
+
+                fetch(form.action, {
+                    method: "POST",
+                    body: data,
+                    headers: {"X-Requested-With": "XMLHttpRequest"}
+                })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) form.reset();
+                        else console.error(data.error);
+                    })
+                    .catch(err => console.error("Error:", err));
             });
 
             document.getElementById("addFlashcardSetForm").addEventListener("submit", function (e) {
