@@ -80,6 +80,10 @@
                 <div id="aiFields" style="display: none;">
                     <input type="text" name="topic" placeholder="Topic (e.g. SQL)" id="topicInput"
                            class="input input-bordered w-full mt-2">
+
+                    <input type="file" name="pdf_file" id="pdfFileInput" accept="application/pdf"
+                           class="file-input file-input-bordered w-full mt-2"/>
+
                     <select name="num_flashcards" id="numFlashcardsInput" class="select select-bordered w-full mt-2">
                         <option value="5">5</option>
                         <option value="10" selected>10</option>
@@ -121,7 +125,8 @@
         <div class="modal-box relative">
             <label for="addFlashcardModal" class="btn btn-sm btn-circle absolute right-2 top-2">✕</label>
             <h3 class="font-bold text-lg">Add Flashcard</h3>
-            <form id="addFlashcardForm" method="post" action="" class="space-y-4 mt-4">
+            <form id="addFlashcardSetForm" method="post" action="{% url 'add-flashcard-set' %}"
+                  enctype="multipart/form-data" class="space-y-4 mt-4">
                 {% csrf_token %}
                 <input type="text" name="front" id="flashcardFront" placeholder="Front"
                        class="input input-bordered w-full" required>
@@ -169,37 +174,59 @@
                 });
             });
 
-            document.getElementById("addFlashcardForm").addEventListener("submit", function (e) {
+            document.getElementById("addFlashcardSetForm").addEventListener("submit", function (e) {
                 e.preventDefault();
                 const form = this;
                 const data = new FormData(form);
 
+                // Get CSRF token from the form
+                const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
                 fetch(form.action, {
                     method: "POST",
                     body: data,
-                    headers: {"X-Requested-With": "XMLHttpRequest"}
+                    headers: {
+                        "X-CSRFToken": csrfToken,
+                        "X-Requested-With": "XMLHttpRequest"
+                    },
+                    // Let the browser set Content-Type when using FormData with the correct boundary
                 })
-                    .then(res => res.json())
+                    .then(res => {
+                        if (res.redirected) {
+                            window.location.href = res.url;
+                            return;
+                        }
+                        return res.json();
+                    })
                     .then(data => {
-                        if (data.success) form.reset();
-                        else console.error(data.error);
+                        if (data && data.redirect_url) {
+                            window.location.href = data.redirect_url;
+                        }
                     })
                     .catch(err => console.error("Error:", err));
             });
 
             const aiToggle = document.getElementById("aiToggle");
             const aiFields = document.getElementById("aiFields");
+            const topicInput = document.getElementById("topicInput");
+            const pdfFileInput = document.getElementById("pdfFileInput");
+
             if (aiToggle) {
                 aiToggle.addEventListener("change", () => {
                     aiFields.style.display = aiToggle.checked ? "block" : "none";
-                    document.getElementById("topicInput").required = aiToggle.checked;
+                    topicInput.required = false;
                 });
             }
 
             document.getElementById("addFlashcardSetForm").addEventListener("submit", e => {
-                if (aiToggle.checked && !document.getElementById("topicInput").value.trim()) {
-                    e.preventDefault();
-                    alert("Please enter a topic for AI set generation.");
+                if (aiToggle.checked) {
+                    const hasTopic = topicInput.value.trim() !== "";
+                    const hasPdf = pdfFileInput.files.length > 0;
+
+                    if (!hasTopic && !hasPdf) {
+                        e.preventDefault();
+                        alert("Please enter a topic or upload a PDF for AI flashcard generation.");
+                    }
                 }
             });
 
