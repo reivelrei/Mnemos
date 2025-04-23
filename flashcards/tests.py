@@ -77,7 +77,8 @@ class FlashcardViewsTest(TestCase):
         })
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertTrue(response_json["success"])
+        self.assertEqual(response_json["status"], "success")
+        self.assertEqual(response_json["count"], 1)
         self.assertTrue(Flashcard.objects.filter(front="New Front", back="New Back").exists())
 
     def test_add_flashcard_set(self):
