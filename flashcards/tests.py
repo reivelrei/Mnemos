@@ -85,7 +85,7 @@ class FlashcardViewsTest(TestCase):
         response = self.client.post(reverse("add-flashcard-set"), {
             "title": "New Set", "description": "New Description"
         })
-        self.assertEqual(response.status_code, 302)  # Redirect to index
+        self.assertEqual(response.status_code, 200)  # No redirect anymore
         self.assertTrue(FlashcardSet.objects.filter(title="New Set").exists())
 
     def test_edit_flashcard(self):
