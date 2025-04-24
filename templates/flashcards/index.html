@@ -292,19 +292,18 @@
                     },
                     // Let the browser set Content-Type when using FormData with the correct boundary
                 })
-                    .then(res => {
-                        if (res.redirected) {
-                            window.location.href = res.url;
-                            return;
-                        }
-                        return res.json();
-                    })
+                    .then(res => res.json())
                     .then(data => {
                         if (data && data.redirect_url) {
                             window.location.href = data.redirect_url;
+                        } else {
+                            console.error("Unexpected response:", data);
                         }
                     })
-                    .catch(err => console.error("Error:", err));
+                    .catch(err => {
+                        console.error("Error:", err);
+                        alert("An unexpected error occurred. Please try again.");
+                    });
             });
 
             // AI Toggle for Flashcard Set

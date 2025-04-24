@@ -2,12 +2,15 @@ import json
 import os
 import fitz
 import requests
+import logging
 from django.contrib import messages
 from django.http import JsonResponse
 from django.shortcuts import redirect
 from dotenv import load_dotenv
 
 from flashcards.models import FlashcardSet, Flashcard
+
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
@@ -30,31 +33,34 @@ def extract_and_validate_form_data(request, is_flashcard_set=True):
         "num_flashcards": int(request.POST.get("num_flashcards", 10))
     }
 
-    # Field-specific validation
+    # The addition of a flashcard set is using HttpResponse
+    # while the addition of "single" flashcards is using JsonResponse.
     if is_flashcard_set:
         data["title"] = request.POST.get("title", "").strip()
         data["description"] = request.POST.get("description", "").strip()
         if not data["title"] or not data["description"]:
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return JsonResponse({"status": "error", "message": "Title and description are required"}, status=400)
             messages.error(request, "Title and description are required")
+            logger.error("Title or description is missing in the request.")
             return redirect("index")
     else:
         data["front"] = request.POST.get("front", "").strip()
         data["back"] = request.POST.get("back", "").strip()
         if not data["generate_with_ai"] and (not data["front"] or not data["back"]):
+            logger.error("Front or back is missing in the request.")
             return JsonResponse({"status": "error", "message": "Front and back are required for manual creation"},
                                 status=400)
 
     # Common file validation
     if data["pdf_file"]:
         if data["pdf_file"].size > 2.5 * 1024 * 1024:  # 2.5MB limit
+            logger.error("PDF file size exceeds limit.")
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return JsonResponse({"status": "error", "message": "PDF file size must be less than 5MB"}, status=400)
             messages.error(request, "PDF file size must be less than 5MB")
             return redirect("index")
 
         if not data["pdf_file"].name.lower().endswith(".pdf"):
+            logger.error("Uploaded file is not a valid PDF.")
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return JsonResponse({"status": "error", "message": "Please upload a valid PDF file"}, status=400)
             messages.error(request, "Please upload a valid PDF file")
@@ -78,47 +84,55 @@ def create_flashcard_set(user, form_data):
     )
 
 
-def handle_ai_generation(request, target_object, form_data, is_flashcard_set=True):
+def handle_ai_generation(request, target_object, form_data):
     """
-    Unified AI generation handler for both flashcard sets and individual flashcards
+    Handles AI-based flashcard generation for a flashcard set or individual flashcard context.
 
-    :param request: HTTP request
-    :param target_object: Either FlashcardSet or Flashcard object
-    :param form_data: Validated form data
-    :param is_flashcard_set: Boolean indicating the target type
-    :return: Tuple of (success_status, result) where result is either count or flashcard data
+    This function supports both standard HTTP requests and AJAX (XHR) requests, adjusting
+    its response format accordingly.
+
+    :param request: Django HTTP request object
+    :param target_object: FlashcardSet instance to which flashcards will be added
+    :param form_data: Validated form data with AI generation parameters
+    :return: Tuple (success: bool, result: dict or None)
+             If AJAX: result is a JSON-serializable dictionary
+             If standard: result is None
     """
-    text_for_ai = extract_text_for_ai(request, form_data)
+    text_input = extract_text_for_ai(request, form_data)
 
-    if not text_for_ai:
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return (False, {"status": "error", "message": "No content provided for AI generation"})
-        messages.warning(request, "No content provided for AI generation")
-        return (False, None)
+    if not text_input:
+        error_message = "No content provided for AI generation"
+        logger.error(error_message)
+
+        if is_ajax(request):
+            return False, {"status": "error", "message": error_message}
+
+        messages.warning(request, error_message)
+        return False, None
 
     try:
-        flashcards_data = generate_flashcards_data_with_ai(text_for_ai, form_data["num_flashcards"])
+        flashcards = generate_flashcards_data_with_ai(text_input, form_data["num_flashcards"])
+        created_count = create_flashcards_from_ai_data(flashcards, target_object)
 
-        if is_flashcard_set:
-            created_count = create_flashcards_from_ai_data(flashcards_data, target_object)
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return (True, {"count": created_count})
-            messages.success(request, f"Successfully created {created_count} flashcards with AI")
-            return (True, None)
-        else:
-            create_flashcards_from_ai_data(flashcards_data, target_object)
-            return (True, {"count": len(flashcards_data)})
+        success_message = f"Successfully generated {created_count} flashcard(s)!"
+        messages.success(request, success_message)
+
+        if is_ajax(request):
+            return True, {"count": created_count} # SUCCESS — AJAX: Return flashcard count in JSON
+        return True, None # SUCCESS — HTTP: Just return success, no JSON needed
 
     except requests.exceptions.RequestException as e:
-        error_msg = f"AI service error: {str(e)}"
+        error_message = f"AI service error: {e}"
     except Exception as e:
-        error_msg = f"An unexpected error occurred: {str(e)}"
+        error_message = f"An unexpected error occurred: {e}"
 
-    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        return (False, {"status": "error", "message": error_msg})
-    messages.error(request, error_msg)
-    return (False, None)
+    logger.error(error_message)
 
+    if is_ajax(request):
+        return False, {"status": "error", "message": error_message}
+
+    messages.error(request, error_message)
+    return False, None
 
 
 def extract_text_for_ai(request, form_data):
@@ -229,3 +243,8 @@ def create_flashcards_from_ai_data(flashcards_data, flashcard_set):
     if created_count == 0:
         raise ValueError("No valid flashcards created from AI data")
     return created_count
+
+
+def is_ajax(request):
+    """ Check if the request is an AJAX request. """
+    return request.headers.get("X-Requested-With") == "XMLHttpRequest"

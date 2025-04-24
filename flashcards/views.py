@@ -88,7 +88,7 @@ def add_flashcard(request, flashcard_set_id):
             flashcard_set = get_object_or_404(FlashcardSet, id=flashcard_set_id, created_by=request.user)
 
             if form_data["generate_with_ai"]:
-                success, result = handle_ai_generation(request, flashcard_set, form_data, is_flashcard_set=False)
+                success, result = handle_ai_generation(request, flashcard_set, form_data)
                 if not success:
                     return JsonResponse(result, status=400)
                 return JsonResponse({"status": "success", "count": result["count"]})
@@ -149,8 +149,9 @@ def add_flashcard_set(request):
         # Handle AI generation if requested
         if form_data["generate_with_ai"]:
             handle_ai_generation(request, flashcard_set, form_data)
-
-        return redirect("index")
+        else:
+            messages.success(request, "Successfully created empty flashcard set!")
+        return JsonResponse({"redirect_url": reverse("index")})
 
     return render(request, "index.html")
 
