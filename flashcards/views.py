@@ -1,6 +1,7 @@
 import os
 
 from django.contrib import messages
+from django.urls import reverse
 from dotenv import load_dotenv
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse, HttpResponse
@@ -45,7 +46,6 @@ def flashcard_view(request, flashcard_id):
 
 @login_required
 def edit_flashcard_set(request, flashcard_set_id):
-    messages.success(request, f"Edit Flashcard Set aufgerufen!")
     if request.method == "POST":
         # Fetch the flashcard set
         flashcard_set = get_object_or_404(FlashcardSet, id=flashcard_set_id, created_by=request.user)
@@ -54,6 +54,8 @@ def edit_flashcard_set(request, flashcard_set_id):
         flashcard_set.title = request.POST.get("title")
         flashcard_set.description = request.POST.get("description")
         flashcard_set.save()
+
+        messages.success(request, f"Successfully updated flashcard set!")
 
         return redirect("index")
     else:
@@ -116,6 +118,7 @@ def delete_flashcard(request, flashcard_id):
         next_card = flashcard.get_next_card_in_set()
 
         flashcard.delete()
+        messages.success(request, "Deleted flashcard successfully!")
 
         # Check if there are any flashcards left in the set
         remaining_flashcards = Flashcard.objects.filter(flashcard_set=flashcard_set)
@@ -157,6 +160,7 @@ def delete_flashcard_set(request, flashcard_set_id):
     if request.method == "POST":
         flashcard_set = get_object_or_404(FlashcardSet, id=flashcard_set_id)
         flashcard_set.delete()
+        messages.success(request, "Deleted flashcard set successfully!")
         return JsonResponse({"redirect_url": "/flashcards/"})
 
     return JsonResponse({"error": "Invalid request"}, status=400)

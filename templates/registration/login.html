@@ -8,15 +8,7 @@
             <h2 class="text-3xl font-semibold text-base-content">Sign in</h2>
             <p class="text-sm text-base-content/60">Welcome back 👋</p>
         </div>
-
-        {% if messages %}
-            <div class="alert alert-error shadow-sm text-sm">
-                {% for message in messages %}
-                    {{ message }}
-                {% endfor %}
-            </div>
-        {% endif %}
-
+        
         <form method="POST" class="space-y-4">
             {% csrf_token %}
             <div class="form-control">

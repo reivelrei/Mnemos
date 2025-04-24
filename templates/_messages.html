@@ -1,0 +1,25 @@
+<div id="django-messages" class="fixed inset-x-0 bottom-20 z-[100] pointer-events-none">
+    <div class="max-w-md mx-auto px-4 space-y-2">
+        {% for message in messages %}
+            <div x-data="{ show: true }"
+                 x-show="show"
+                 x-init="setTimeout(() => show = false, 5000)"
+                 x-transition
+                 role="alert"
+                 class="alert {% if 'error' in message.tags %}alert-error{% elif 'success' in message.tags %}alert-success{% elif 'warning' in message.tags %}alert-warning{% else %}alert-info{% endif %} shadow-lg pointer-events-auto">
+
+                {% if 'success' in message.tags %}
+                    <i class="bi bi-check-circle" style="font-size: 1.25rem;"></i>
+                {% elif 'error' in message.tags %}
+                    <i class="bi bi-exclamation-circle" style="font-size: 1.25rem;"></i>
+                {% endif %}
+
+                <span>{{ message }}</span>
+
+                <button @click="show = false" class="btn btn-sm btn-ghost">
+                    <i class="bi bi-x-lg" style="font-size: 1rem;"></i>
+                </button>
+            </div>
+        {% endfor %}
+    </div>
+</div>
