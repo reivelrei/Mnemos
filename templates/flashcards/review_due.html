@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %} Due Flashcards {% endblock %}
+{% block content %}
+<div class="container mx-auto mt-10">
+    <h1 class="text-2xl font-bold mb-6">Flashcards Due for Review</h1>
+    
+    {% if due_flashcards %}
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {% for flashcard in due_flashcards %}
+                <div class="card bg-base-200 shadow-xl">
+                    <div class="card-body">
+                        <h2 class="card-title">{{ flashcard.front }}</h2>
+                        <p>{{ flashcard.flashcard_set.title }}</p>
+                        <div class="card-actions justify-end">
+                            <a href="{% url 'flashcard-detail' flashcard.id %}?show_back=True" 
+                               class="btn btn-primary">Review</a>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-success">
+            <p>No flashcards due for review right now!</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

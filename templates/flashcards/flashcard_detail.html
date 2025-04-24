@@ -28,6 +28,19 @@
                 <!-- Flashcard back or show button -->
                 {% if show_back %}
                     <p class="text-lg text-center text-neutral-content">{{ flashcard.back }}</p>
+                    <!-- Add rating buttons -->
+                    <div class="flex justify-center gap-2 mt-4">
+                        <form method="post" class="flex gap-2">
+                            {% csrf_token %}
+                            <button type="submit" name="rating" value="1" class="btn btn-error btn-sm">1 - Forgot
+                            </button>
+                            <button type="submit" name="rating" value="2" class="btn btn-warning btn-sm">2 - Hard
+                            </button>
+                            <button type="submit" name="rating" value="3" class="btn btn-info btn-sm">3 - Good</button>
+                            <button type="submit" name="rating" value="4" class="btn btn-success btn-sm">4 - Easy
+                            </button>
+                        </form>
+                    </div>
                 {% else %}
                     <div class="text-center">
                         <a href="?show_back=True" class="btn btn-primary btn-sm">Show</a>

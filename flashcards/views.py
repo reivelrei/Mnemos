@@ -1,18 +1,23 @@
 import os
+from datetime import timedelta
 
+from django.utils import timezone
 from django.contrib import messages
 from django.urls import reverse
 from dotenv import load_dotenv
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render, get_object_or_404, redirect
-from .models import Flashcard, FlashcardSet
+
+from .fsrs import FSRS
+from .models import Flashcard, FlashcardSet, Review, ReviewState
 from .utils import extract_and_validate_form_data, create_flashcard_set, handle_ai_generation
 
 load_dotenv()
 
 GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+
 
 @login_required
 def index(request):
@@ -28,19 +33,70 @@ def index(request):
 
 @login_required
 def flashcard_view(request, flashcard_id):
-    # Fetch the flashcard object or return a 404 error if not found
     flashcard = get_object_or_404(Flashcard, id=flashcard_id)
-
-    # Check if the user wants to see the back of the card (via a query parameter)
     show_back = request.GET.get("show_back", False)
+    user = request.user
+    now = timezone.now()
 
-    # Prepare the context to pass to the template
+    if request.method == 'POST' and 'rating' in request.POST:
+        rating = int(request.POST.get('rating'))
+        review_state, created = Review.objects.get_or_create(
+            user=user,
+            flashcard=flashcard,
+            defaults={
+                'state': ReviewState.NEW,
+                'stability': 0.0,  # Initial S before first calc
+                'difficulty': FSRS.DEFAULT_PARAMS[4],  # Initial D often set near w[4]
+                'repetitions': 0,
+                'lapses': 0,
+                'last_review_date': None,
+                # Set initial next_review_date to now to make it appear immediately
+                'next_review_date': now
+            }
+        )
+
+        # Instantiate the FSRS calculator
+        fsrs_calc = FSRS()  # Uses default parameters
+
+        # Perform the FSRS calculation
+        result = fsrs_calc.update_state(
+            current_state=review_state.state,
+            current_s=review_state.stability,
+            current_d=review_state.difficulty,
+            last_review_date=review_state.last_review_date,
+            now=now,
+            app_rating=rating  # Your app's rating (e.g., 0-5)
+        )
+
+        # Update the Review object with the new state
+        review_state.stability = result['new_s']
+        review_state.difficulty = result['new_d']
+        review_state.state = result['new_state']
+        review_state.last_review_date = now
+        review_state.next_review_date = now + timedelta(days=result['interval'])
+
+        # Update repetitions and lapses
+        review_state.repetitions += 1
+        # if fsrs_calc._map_rating(rating) == 1:  # If rating was 'Again'
+        if rating == 1:  # If rating was 'Again'
+            review_state.lapses += 1
+
+        # Store the last rating given (optional)
+        # review_state.last_performance_rating = user_rating
+
+        review_state.save()
+
+
+        next_card = flashcard.get_next_card_in_set()
+        if next_card:
+            return redirect('flashcard-detail', flashcard_id=next_card.id)
+        messages.success(request, "Everything learned!")
+        return redirect('index')
+
     context = {
         "flashcard": flashcard,
         "show_back": show_back,
     }
-
-    # Render the template with the context
     return render(request, "flashcards/flashcard_detail.html", context)
 
 
@@ -165,3 +221,17 @@ def delete_flashcard_set(request, flashcard_set_id):
         return JsonResponse({"redirect_url": "/flashcards/"})
 
     return JsonResponse({"error": "Invalid request"}, status=400)
+
+
+@login_required
+def review_due(request):
+    # Get flashcards due for review
+    due_flashcards = Flashcard.objects.filter(
+        review__user=request.user,
+        review__next_review_date__lte=timezone.now()
+    ).distinct().order_by('review__next_review_date')
+
+    context = {
+        "due_flashcards": due_flashcards,
+    }
+    return render(request, "flashcards/review_due.html", context)

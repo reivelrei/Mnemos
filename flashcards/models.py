@@ -1,5 +1,7 @@
 from django.db import models
 from django.contrib.auth import get_user_model
+from django.utils.translation import gettext_lazy as _
+
 
 class FlashcardSet(models.Model):
     title = models.CharField(max_length=50)
@@ -10,6 +12,7 @@ class FlashcardSet(models.Model):
 
     def __str__(self):
         return f"{self.title}"
+
 
 class Flashcard(models.Model):
     front = models.CharField(max_length=255)
@@ -35,6 +38,51 @@ class Flashcard(models.Model):
         ).order_by('-id').first()
         return previous_card
 
+
 class Tag(models.Model):
     name = models.CharField(max_length=50)
     flashcard_sets = models.ManyToManyField(FlashcardSet)
+
+
+class ReviewState(models.TextChoices):
+    NEW = 'NEW', _('New')
+    LEARNING = 'LRN', _('Learning')
+    REVIEW = 'REV', _('Review')
+    RELEARNING = 'REL', _('Relearning')
+
+
+class Review(models.Model):
+    flashcard = models.ForeignKey('Flashcard', on_delete=models.CASCADE)  # Replace 'Flashcard' if needed
+    user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE)
+
+    # FSRS Parameters - calculated after each review
+    stability = models.FloatField(default=0.0)  # S value (unit: days)
+    difficulty = models.FloatField(
+        default=5.0)  # D value (standard FSRS scale 1-10). Initial value is often set based on first grade.
+    # Consider if default=0.0 makes more sense for S and D before first review?
+
+    # Scheduling & History Tracking
+    repetitions = models.IntegerField(default=0)  # Number of times reviewed (or successful reviews)
+    lapses = models.IntegerField(default=0)  # Optional: Track number of times user forgot (graded "Again")
+    state = models.CharField(
+        max_length=3,
+        choices=ReviewState.choices,
+        default=ReviewState.NEW
+    )
+    last_review_date = models.DateTimeField(null=True, blank=True)  # Timestamp of the last review
+    next_review_date = models.DateTimeField(db_index=True)  # When the card is due next (indexed for faster lookups)
+
+    # Optional: Store the last rating given *in your app's scale* if useful for UI/history
+    # last_performance_rating = models.IntegerField(null=True, blank=True) # 0–5 scale (your app's scale)
+
+    class Meta:
+        ordering = ["next_review_date"]
+        constraints = [
+            models.UniqueConstraint(fields=['user', 'flashcard'], name='unique_user_flashcard_review_state')
+        ]
+        indexes = [
+            models.Index(fields=['user', 'next_review_date']),  # Useful for fetching due cards for a user
+        ]
+
+    def __str__(self):
+        return f"{self.flashcard} - Due: {self.next_review_date.strftime('%Y-%m-%d %H:%M')}"
