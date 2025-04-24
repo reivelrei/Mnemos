@@ -11,5 +11,7 @@ urlpatterns = [
     path("delete-flashcard/<int:flashcard_id>/", views.delete_flashcard, name="delete-flashcard"),
     path("add-flashcard-set/", views.add_flashcard_set, name="add-flashcard-set"),
     path("delete-flashcard-set/<int:flashcard_set_id>/", views.delete_flashcard_set, name="delete-flashcard-set"),
-    path('review/', views.review_due, name='review-due'),
+    path("review-due/", views.review_due, name="review-due"),
+    path("review-set/start/<int:set_id>/", views.start_set_review_session, name="start-set-review"),
+    path("review-due-card/<int:flashcard_id>/", views.review_due_card_view, name="review-due-card"),
 ]

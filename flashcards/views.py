@@ -1,6 +1,7 @@
 import os
 from datetime import timedelta
 
+from django.db.models import Count, Q
 from django.utils import timezone
 from django.contrib import messages
 from django.urls import reverse
@@ -9,9 +10,8 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render, get_object_or_404, redirect
 
-from .fsrs import FSRS
-from .models import Flashcard, FlashcardSet, Review, ReviewState
-from .utils import extract_and_validate_form_data, create_flashcard_set, handle_ai_generation
+from .models import Flashcard, FlashcardSet
+from .utils import extract_and_validate_form_data, create_flashcard_set, handle_ai_generation, update_review_state
 
 load_dotenv()
 
@@ -36,62 +36,17 @@ def flashcard_view(request, flashcard_id):
     flashcard = get_object_or_404(Flashcard, id=flashcard_id)
     show_back = request.GET.get("show_back", False)
     user = request.user
-    now = timezone.now()
 
-    if request.method == 'POST' and 'rating' in request.POST:
-        rating = int(request.POST.get('rating'))
-        review_state, created = Review.objects.get_or_create(
-            user=user,
-            flashcard=flashcard,
-            defaults={
-                'state': ReviewState.NEW,
-                'stability': 0.0,  # Initial S before first calc
-                'difficulty': FSRS.DEFAULT_PARAMS[4],  # Initial D often set near w[4]
-                'repetitions': 0,
-                'lapses': 0,
-                'last_review_date': None,
-                # Set initial next_review_date to now to make it appear immediately
-                'next_review_date': now
-            }
-        )
+    if request.method == "POST" and "rating" in request.POST:
+        rating = int(request.POST.get("rating"))
 
-        # Instantiate the FSRS calculator
-        fsrs_calc = FSRS()  # Uses default parameters
-
-        # Perform the FSRS calculation
-        result = fsrs_calc.update_state(
-            current_state=review_state.state,
-            current_s=review_state.stability,
-            current_d=review_state.difficulty,
-            last_review_date=review_state.last_review_date,
-            now=now,
-            app_rating=rating  # Your app's rating (e.g., 0-5)
-        )
-
-        # Update the Review object with the new state
-        review_state.stability = result['new_s']
-        review_state.difficulty = result['new_d']
-        review_state.state = result['new_state']
-        review_state.last_review_date = now
-        review_state.next_review_date = now + timedelta(days=result['interval'])
-
-        # Update repetitions and lapses
-        review_state.repetitions += 1
-        # if fsrs_calc._map_rating(rating) == 1:  # If rating was 'Again'
-        if rating == 1:  # If rating was 'Again'
-            review_state.lapses += 1
-
-        # Store the last rating given (optional)
-        # review_state.last_performance_rating = user_rating
-
-        review_state.save()
-
+        update_review_state(user, flashcard, rating)
 
         next_card = flashcard.get_next_card_in_set()
         if next_card:
-            return redirect('flashcard-detail', flashcard_id=next_card.id)
+            return redirect("flashcard-detail", flashcard_id=next_card.id)
         messages.success(request, "Everything learned!")
-        return redirect('index')
+        return redirect("index")
 
     context = {
         "flashcard": flashcard,
@@ -225,13 +180,132 @@ def delete_flashcard_set(request, flashcard_set_id):
 
 @login_required
 def review_due(request):
-    # Get flashcards due for review
-    due_flashcards = Flashcard.objects.filter(
-        review__user=request.user,
-        review__next_review_date__lte=timezone.now()
-    ).distinct().order_by('review__next_review_date')
+    """
+    Displays Flashcard Sets that have cards due for review for the current user.
+    """
+    now = timezone.now()
+    user = request.user
+
+    # Find sets that have at least one flashcard with a review due for this user
+    due_sets = FlashcardSet.objects.filter(
+        created_by=user,  # Assuming FlashcardSet is linked to the user
+        flashcard__review__user=user,
+        flashcard__review__next_review_date__lte=now
+    ).annotate(
+        # Count the number of *due* flashcards within each set for this user
+        due_flashcard_count=Count(
+            "flashcard",
+            filter=Q(flashcard__review__user=user, flashcard__review__next_review_date__lte=now)
+        )
+    ).filter(
+        # Ensure we only list sets that actually have due cards
+        due_flashcard_count__gt=0
+    ).distinct().order_by("title")  # Order sets alphabetically by title
 
     context = {
-        "due_flashcards": due_flashcards,
+        "due_sets": due_sets,
     }
     return render(request, "flashcards/review_due.html", context)
+
+
+@login_required
+def start_set_review_session(request, set_id):
+    """
+    Initializes a review session for due cards within a specific set.
+    Stores the list of due card IDs in the session and redirects to the first card.
+    """
+    now = timezone.now()
+    user = request.user
+    flashcard_set = get_object_or_404(FlashcardSet, id=set_id, created_by=user)
+
+    # Get IDs of flashcards in this set that are due for this user
+    due_card_ids = list(Flashcard.objects.filter(
+        flashcard_set=flashcard_set,
+        review__user=user,
+        review__next_review_date__lte=now
+    ).order_by("review__next_review_date", "id").values_list("id", flat=True))
+
+    if not due_card_ids:
+        messages.info(request, f"No cards currently due for review in '{flashcard_set.title}'.")
+        return redirect("review-due")  # Redirect back to the due sets list
+
+    # Store the list of IDs and the set ID in the session
+    request.session["due_review_set_id"] = set_id
+    request.session["due_review_ids"] = due_card_ids
+
+    # Redirect to the review view for the first card in the list
+    first_card_id = due_card_ids[0]
+    return redirect("review-due-card", flashcard_id=first_card_id)
+
+
+@login_required
+def review_due_card_view(request, flashcard_id):
+    """
+    Handles the display and rating submission for a card within a 'due review' session.
+    Uses the session to find the next card.
+    """
+    # Ensure we are in a review session
+    if "due_review_ids" not in request.session or not request.session["due_review_ids"]:
+        messages.warning(request, "Review session not found or ended. Redirecting.")
+        # Clear potentially lingering session variable if list is empty
+        request.session.pop("due_review_set_id", None)
+        request.session.pop("due_review_ids", None)
+        return redirect("review-due")  # Or 'index'
+
+    current_card_id = flashcard_id
+    due_ids = request.session["due_review_ids"]
+    set_id = request.session["due_review_set_id"]
+
+    # Verify the requested card is actually part of the current session list
+    # (Prevents accessing cards not in the current due queue via URL manipulation)
+    # Convert due_ids elements to int if they aren't already (session might store strings)
+    if current_card_id not in [int(id_val) for id_val in due_ids]:
+        messages.error(request, "Invalid card requested for this review session.")
+        # Clear session and redirect
+        request.session.pop("due_review_set_id", None)
+        request.session.pop("due_review_ids", None)
+        return redirect("review-due")
+
+    flashcard = get_object_or_404(Flashcard, id=current_card_id)
+    show_back = request.GET.get("show_back", False)
+    user = request.user
+
+    if request.method == "POST" and "rating" in request.POST:
+        rating = int(request.POST.get("rating"))
+
+        update_review_state(user, flashcard, rating)
+
+        # --- Session Logic for Next Card ---
+        # Remove the just reviewed card ID (convert to int for comparison)
+        try:
+            # Ensure we are working with integers
+            current_due_ids_int = [int(id_val) for id_val in request.session.get("due_review_ids", [])]
+            current_due_ids_int.remove(current_card_id)
+            request.session["due_review_ids"] = current_due_ids_int  # Store updated list back
+        except ValueError:
+            # Should not happen if validation above worked, but handle defensively
+            pass  # Card already removed or wasn't there
+
+        # Find the next card ID from the updated list in the session
+        remaining_ids = request.session.get("due_review_ids", [])
+
+        if remaining_ids:
+            next_card_id = remaining_ids[0]  # Get the next one in the pre-ordered list
+            return redirect("review-due-card", flashcard_id=next_card_id)
+        else:
+            # No more cards left in this session
+            messages.success(request, f"Review complete for set '{flashcard.flashcard_set.title}'!")
+            # Clear session variables
+            request.session.pop("due_review_set_id", None)
+            request.session.pop("due_review_ids", None)
+            return redirect("review-due")  # Go back to the list of due sets
+
+    # --- GET Request or Initial Load ---
+    context = {
+        "flashcard": flashcard,
+        "show_back": show_back,
+        "is_review_session": True,  # Flag for the template (optional)
+        "remaining_in_session": len(request.session.get("due_review_ids", []))  # How many left (optional)
+    }
+    # Reuse the same detail template, potentially adjusting based on 'is_review_session'
+    return render(request, "flashcards/flashcard_detail.html", context)

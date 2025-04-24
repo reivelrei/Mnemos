@@ -1,28 +1,37 @@
 {% extends "base.html" %}
-{% block title %} Due Flashcards {% endblock %}
+{% block title %} Due Flashcard Sets {% endblock %}
 {% block content %}
-<div class="container mx-auto mt-10">
-    <h1 class="text-2xl font-bold mb-6">Flashcards Due for Review</h1>
-    
-    {% if due_flashcards %}
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {% for flashcard in due_flashcards %}
-                <div class="card bg-base-200 shadow-xl">
-                    <div class="card-body">
-                        <h2 class="card-title">{{ flashcard.front }}</h2>
-                        <p>{{ flashcard.flashcard_set.title }}</p>
-                        <div class="card-actions justify-end">
-                            <a href="{% url 'flashcard-detail' flashcard.id %}?show_back=True" 
-                               class="btn btn-primary">Review</a>
+    <div class="container mx-auto mt-10">
+        <h1 class="text-2xl font-bold mb-6">Sets with Due Flashcards</h1>
+
+        {% if due_sets %}
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                {% for set in due_sets %}
+                    <div class="card bg-base-200 shadow-md">
+                        <div class="card-body">
+                            <a href="{% url 'start-set-review' set.id %}">
+                                <h2 class="card-title">
+                                    {{ set.title }}
+                                </h2>
+                            </a>
+                            <p class="text-base opacity-80">{{ set.description }}</p>
+                            <div class="flex justify-between items-center mt-4">
+                                <div class="badge badge-secondary">{{ set.due_flashcard_count }}
+                                    Card{{ set.due_flashcard_count|pluralize }}</div>
+                                <div class="card-actions justify-end">
+                                    <div class="badge badge-outline">SQL</div>
+                                    <div class="badge badge-outline">Database</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </div>
-            {% endfor %}
-        </div>
-    {% else %}
-        <div class="alert alert-success">
-            <p>No flashcards due for review right now!</p>
-        </div>
-    {% endif %}
-</div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="alert alert-success">
+                <i class="bi bi-check-circle" style="font-size: 1.25rem;"></i>
+                <span>No flashcards due for review right now! Well done!</span>
+            </div>
+        {% endif %}
+    </div>
 {% endblock %}

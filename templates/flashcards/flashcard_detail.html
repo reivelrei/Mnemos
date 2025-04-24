@@ -48,27 +48,34 @@
                 {% endif %}
 
                 <!-- Navigation buttons -->
-                <div class="flex justify-between mt-4">
-                    {% with previous_card=flashcard.get_previous_card_in_set %}
-                        {% if previous_card %}
-                            <a href="{% url 'flashcard-detail' previous_card.id %}" class="btn btn-outline btn-sm">
-                                &larr; Previous
-                            </a>
-                        {% else %}
-                            <button class="btn btn-outline btn-sm" disabled>&larr; Previous</button>
-                        {% endif %}
-                    {% endwith %}
+                {% if not is_review_session %}
+                    <div class="flex justify-between mt-4">
+                        {% with previous_card=flashcard.get_previous_card_in_set %}
+                            {% if previous_card %}
+                                <a href="{% url 'flashcard-detail' previous_card.id %}" class="btn btn-outline btn-sm">
+                                    &larr; Previous
+                                </a>
+                            {% else %}
+                                <button class="btn btn-outline btn-sm" disabled>&larr; Previous</button>
+                            {% endif %}
+                        {% endwith %}
 
-                    {% with next_card=flashcard.get_next_card_in_set %}
-                        {% if next_card %}
-                            <a href="{% url 'flashcard-detail' next_card.id %}" class="btn btn-outline btn-sm">
-                                Next &rarr;
-                            </a>
-                        {% else %}
-                            <button class="btn btn-outline btn-sm" disabled>Next &rarr;</button>
-                        {% endif %}
-                    {% endwith %}
-                </div>
+                        {% with next_card=flashcard.get_next_card_in_set %}
+                            {% if next_card %}
+                                <a href="{% url 'flashcard-detail' next_card.id %}" class="btn btn-outline btn-sm">
+                                    Next &rarr;
+                                </a>
+                            {% else %}
+                                <button class="btn btn-outline btn-sm" disabled>Next &rarr;</button>
+                            {% endif %}
+                        {% endwith %}
+                    </div>
+                {% else %}
+                    <div class="text-center mt-4 text-sm text-neutral-content">
+                        {{ remaining_in_session|add:"-1" }} card{{ remaining_in_session|add:"-1"|pluralize }} remaining
+                        in this review session.
+                    </div>
+                {% endif %}
             </div>
         </div>
     </div>

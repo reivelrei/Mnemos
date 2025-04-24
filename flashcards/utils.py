@@ -5,8 +5,12 @@ import requests
 import logging
 from django.contrib import messages
 from django.http import JsonResponse
+from django.utils import timezone
 from django.shortcuts import redirect
 from dotenv import load_dotenv
+from datetime import timedelta
+from .models import Review, ReviewState
+from .fsrs import FSRS
 
 from flashcards.models import FlashcardSet, Flashcard
 
@@ -54,14 +58,14 @@ def extract_and_validate_form_data(request, is_flashcard_set=True):
     if data["pdf_file"]:
         if data["pdf_file"].size > 2.5 * 1024 * 1024:  # 2.5MB limit
             logger.error("PDF file size exceeds limit.")
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            if is_ajax(request):
                 return JsonResponse({"status": "error", "message": "PDF file size must be less than 5MB"}, status=400)
             messages.error(request, "PDF file size must be less than 5MB")
             return redirect("index")
 
         if not data["pdf_file"].name.lower().endswith(".pdf"):
             logger.error("Uploaded file is not a valid PDF.")
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            if is_ajax(request):
                 return JsonResponse({"status": "error", "message": "Please upload a valid PDF file"}, status=400)
             messages.error(request, "Please upload a valid PDF file")
             return redirect("index")
@@ -118,8 +122,8 @@ def handle_ai_generation(request, target_object, form_data):
         messages.success(request, success_message)
 
         if is_ajax(request):
-            return True, {"count": created_count} # SUCCESS — AJAX: Return flashcard count in JSON
-        return True, None # SUCCESS — HTTP: Just return success, no JSON needed
+            return True, {"count": created_count}  # SUCCESS — AJAX: Return flashcard count in JSON
+        return True, None  # SUCCESS — HTTP: Just return success, no JSON needed
 
     except requests.exceptions.RequestException as e:
         error_message = f"AI service error: {e}"
@@ -248,3 +252,52 @@ def create_flashcards_from_ai_data(flashcards_data, flashcard_set):
 def is_ajax(request):
     """ Check if the request is an AJAX request. """
     return request.headers.get("X-Requested-With") == "XMLHttpRequest"
+
+
+def update_review_state(user, flashcard, rating):
+    now = timezone.now()
+    review_state, created = Review.objects.get_or_create(
+        user=user,
+        flashcard=flashcard,
+        defaults={
+            "state": ReviewState.NEW,
+            "stability": 0.0, # Initial S before first calc
+            "difficulty": FSRS.DEFAULT_PARAMS[4], # Initial D often set near w[4]
+            "repetitions": 0,
+            "lapses": 0,
+            "last_review_date": None,
+            "next_review_date": now # Set initial next_review_date to now to make it appear immediately
+        }
+    )
+
+    # Instantiate the FSRS calculator
+    fsrs_calc = FSRS()
+
+    # Perform the FSRS calculation
+    result = fsrs_calc.update_state(
+        current_state=review_state.state,
+        current_s=review_state.stability,
+        current_d=review_state.difficulty,
+        last_review_date=review_state.last_review_date,
+        now=now,
+        app_rating=rating
+    )
+
+    # Update the Review object with the new state
+    review_state.stability = result["new_s"]
+    review_state.difficulty = result["new_d"]
+    review_state.state = result["new_state"]
+    review_state.last_review_date = now
+    review_state.next_review_date = now + timedelta(days=result["interval"])
+
+    # Update repetitions and lapses
+    review_state.repetitions += 1
+    if rating == 1:
+        review_state.lapses += 1
+
+    # Store the last rating given (optional)
+    # review_state.last_performance_rating = user_rating
+
+    review_state.save()
+
+    return review_state
