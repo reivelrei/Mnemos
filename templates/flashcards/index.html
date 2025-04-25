@@ -30,7 +30,7 @@
                                 <div class="bg-gray-500 h-full" style="width: {{ flashcard_set.progress.gray }}%"></div>
                             </div>
                         </div>
-                    
+
                         <small class="text-sm opacity-60">By {{ flashcard_set.created_by.username }}
                             on {{ flashcard_set.created_at|date:"M d, Y" }}</small>
                     </div>
@@ -217,6 +217,12 @@
             document.getElementById("addFlashcardForm").addEventListener("submit", function (e) {
                 e.preventDefault();
                 const form = this;
+                const saveButton = form.querySelector('.modal-action button[type="submit"]');
+                if (saveButton) {
+                    saveButton.disabled = true;
+                    saveButton.textContent = "Saving...";
+                }
+
                 const data = new FormData(form);
 
                 // Validation for AI generation
@@ -240,6 +246,10 @@
                     }
 
                     if (errors.length > 0) {
+                        if (saveButton) {
+                            saveButton.disabled = false; // Re-enable on validation error
+                            saveButton.textContent = "Save Flashcard";
+                        }
                         alert("Please fix these issues:\n" + errors.join("\n"));
                         return;
                     }
@@ -258,12 +268,20 @@
                 })
                     .then(res => {
                         if (res.redirected) {
+                            if (saveButton) {
+                                saveButton.disabled = false; // Re-enable on redirect
+                                saveButton.textContent = "Save Flashcard";
+                            }
                             window.location.href = res.url;
                             return;
                         }
                         return res.json();
                     })
                     .then(data => {
+                        if (saveButton) {
+                            saveButton.disabled = false; // Re-enable on success
+                            saveButton.textContent = "Save Flashcard";
+                        }
                         if (data && data.status === "success") {
                             document.getElementById("flashcardFront").value = "";
                             document.getElementById("flashcardBack").value = "";
@@ -281,6 +299,10 @@
                         }
                     })
                     .catch(err => {
+                        if (saveButton) {
+                            saveButton.disabled = false; // Re-enable on error
+                            saveButton.textContent = "Save Flashcard";
+                        }
                         console.error("Error:", err);
                         alert("An error occurred. Please try again.");
                     });
@@ -289,6 +311,12 @@
             document.getElementById("addFlashcardSetForm").addEventListener("submit", function (e) {
                 e.preventDefault();
                 const form = this;
+                const submitButton = form.querySelector('.modal-action button[type="submit"]');
+                if (submitButton) {
+                    submitButton.disabled = true;
+                    submitButton.textContent = "Saving Set...";
+                }
+
                 const data = new FormData(form);
 
                 // Get CSRF token from the form
@@ -305,6 +333,10 @@
                 })
                     .then(res => res.json())
                     .then(data => {
+                        if (submitButton) {
+                            submitButton.disabled = false; // Re-enable on success
+                            submitButton.textContent = "Save Set";
+                        }
                         if (data && data.redirect_url) {
                             window.location.href = data.redirect_url;
                         } else {
@@ -312,6 +344,10 @@
                         }
                     })
                     .catch(err => {
+                        if (submitButton) {
+                            submitButton.disabled = false; // Re-enable on error
+                            submitButton.textContent = "Save Set";
+                        }
                         console.error("Error:", err);
                         alert("An unexpected error occurred. Please try again.");
                     });
