@@ -13,6 +13,7 @@ from .models import Review, ReviewState
 from .fsrs import FSRS
 
 from flashcards.models import FlashcardSet, Flashcard
+from .services import update_stats_after_review
 
 logger = logging.getLogger(__name__)
 
@@ -299,5 +300,8 @@ def update_review_state(user, flashcard, rating):
     # review_state.last_performance_rating = user_rating
 
     review_state.save()
+
+    # Update daily stats and set progress (rating > 2, maybe change number later)
+    update_stats_after_review(review_state, performance_correct=(rating > 2))
 
     return review_state

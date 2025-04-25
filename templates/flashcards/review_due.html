@@ -1,13 +1,12 @@
 {% extends "base.html" %}
 {% block title %} Due Flashcard Sets {% endblock %}
 {% block content %}
-    <div class="container mx-auto mt-10">
-        <h1 class="text-2xl font-bold mb-6">Sets with Due Flashcards</h1>
+    <div class="container mx-auto mt-20">
 
         {% if due_sets %}
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                 {% for set in due_sets %}
-                    <div class="card bg-base-200 shadow-md">
+                    <div class="card bg-base-100 shadow-lg">
                         <div class="card-body">
                             <a href="{% url 'start-set-review' set.id %}">
                                 <h2 class="card-title">
@@ -19,8 +18,8 @@
                                 <div class="badge badge-secondary">{{ set.due_flashcard_count }}
                                     Card{{ set.due_flashcard_count|pluralize }}</div>
                                 <div class="card-actions justify-end">
-                                    <div class="badge badge-outline">SQL</div>
-                                    <div class="badge badge-outline">Database</div>
+                                    <div class="badge badge-outline">Lorem</div>
+                                    <div class="badge badge-outline">Ipsum</div>
                                 </div>
                             </div>
                         </div>

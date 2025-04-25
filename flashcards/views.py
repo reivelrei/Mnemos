@@ -10,7 +10,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render, get_object_or_404, redirect
 
-from .models import Flashcard, FlashcardSet
+from .models import Flashcard, FlashcardSet, DailyUserStats, Review, ReviewState
 from .utils import extract_and_validate_form_data, create_flashcard_set, handle_ai_generation, update_review_state
 
 load_dotenv()
@@ -21,12 +21,61 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 @login_required
 def index(request):
+    user = request.user
+    today = timezone.now().date()
+
     # Fetch all flashcard sets
     flashcard_sets = FlashcardSet.objects.all().filter(created_by=request.user)
 
-    # Pass the flashcard sets to the template
+    for flashcard_set in flashcard_sets:
+        flashcards = flashcard_set.flashcard_set.all()
+        total_cards = flashcards.count()
+
+        progress_data = {
+            "green": 0,
+            "yellow": 0,
+            "red": 0,
+            "gray": 0,
+        }
+
+        if total_cards > 0:
+            reviewed = Review.objects.filter(user=user, flashcard__in=flashcards)
+
+            # Still to be figured out
+            green = reviewed.filter(Q(stability__gt=20) | Q(repetitions__gt=4)).count()
+            yellow = reviewed.filter(stability__lte=20, state__in=[ReviewState.REVIEW]).count()
+            red = reviewed.filter(state__in=[ReviewState.LEARNING, ReviewState.RELEARNING]).count()
+            reviewed_card_ids = reviewed.values_list("flashcard_id", flat=True)
+            gray = total_cards - len(set(reviewed_card_ids))
+
+            # calculate percentages
+            progress_data["green"] = int((green / total_cards) * 100)
+            progress_data["yellow"] = int((yellow / total_cards) * 100)
+            progress_data["red"] = int((red / total_cards) * 100)
+            progress_data["gray"] = max(0, 100 - (progress_data["green"] + progress_data["yellow"] + progress_data["red"]))
+
+        flashcard_set.progress = progress_data
+
+
+    # Daily stats
+    today_stats = DailyUserStats.objects.filter(user=user, date=today).first()
+    total_reviews = Review.objects.filter(user=user).count()
+    total_cards = Flashcard.objects.filter(flashcard_set__created_by=user).count()
+
+    # Number of consecutive days with reviews
+    streak = 0
+    day_cursor = today
+    while DailyUserStats.objects.filter(user=user, date=day_cursor, total_reviews__gt=0).exists():
+        streak += 1
+        day_cursor -= timedelta(days=1)
+
+    # Pass flashcard_sets and stats to the template
     context = {
         "flashcard_sets": flashcard_sets,
+        "total_reviews": total_reviews,
+        "total_cards": total_cards,
+        "today_reviews": today_stats.total_reviews if today_stats else 0,
+        "streak": streak,
     }
     return render(request, "flashcards/index.html", context)
 

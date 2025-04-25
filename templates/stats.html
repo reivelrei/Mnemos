@@ -1,35 +1,42 @@
+{% load humanize %}
 {% block stats %}
 
-<div class="flex justify-center w-full mt-20">
-    <div class="stats shadow md:w-auto">
-        <div class="stat p-2 md:p-4">
-            <div class="stat-figure text-primary">
-                <i class="bi bi-arrow-repeat text-base md:text-lg"></i>
+    <div class="flex justify-center w-full mt-20">
+        <div class="stats shadow md:w-auto">
+            <div class="stat p-2 md:p-4">
+                <div class="stat-figure text-primary">
+                    <i class="bi bi-arrow-repeat text-base md:text-lg"></i>
+                </div>
+                <div class="stat-title text-xs md:text-sm">Reviewed</div>
+                <div class="stat-value text-primary text-xl md:text-3xl">{{ total_reviews|intcomma }} / {{ total_cards|intcomma}}</div>
+                <div class="stat-desc text-xs md:text-sm">Overall</div>
             </div>
-            <div class="stat-title text-xs md:text-sm">Reviewed</div>
-            <div class="stat-value text-primary text-xl md:text-3xl">1.052</div>
-            <div class="stat-desc text-xs md:text-sm">Cards Total</div>
-        </div>
 
-        <div class="stat p-2 md:p-4">
-            <div class="stat-figure text-secondary">
-                 <i class="bi bi-stars text-base md:text-lg"></i>
+            <div class="stat p-2 md:p-4">
+                <div class="stat-figure text-secondary">
+                    <i class="bi bi-stars text-base md:text-lg"></i>
+                </div>
+                <div class="stat-title text-xs md:text-sm">Reviewed</div>
+                <div class="stat-value text-secondary text-xl md:text-3xl">{{ today_reviews }}</div>
+                <div class="stat-desc text-xs md:text-sm">Cards Today</div>
             </div>
-             <div class="stat-title text-xs md:text-sm">Reviewed</div>
-             <div class="stat-value text-secondary text-xl md:text-3xl">53</div>
-             <div class="stat-desc text-xs md:text-sm">Cards Today</div>
-        </div>
 
-        <div class="stat p-2 md:p-4">
-            <div class="stat-figure">
-                 <i class="bi bi-fire text-base md:text-lg"></i>
+            <div class="stat p-2 md:p-4">
+                <div class="stat-figure">
+                    <i class="bi bi-fire text-base md:text-lg"></i>
+                </div>
+                <div class="stat-title text-xs md:text-sm">Study Streak</div>
+                <div class="stat-value text-xl md:text-3xl">{{ streak }}</div>
+                <div class="stat-desc text-xs md:text-sm">
+                    {% if streak > 0 %}
+                        You're rocking it!
+                    {% else %}
+                        Start your streak today 💪
+                    {% endif %}
+                </div>
             </div>
-            <div class="stat-title text-xs md:text-sm">Study Streak</div>
-            <div class="stat-value text-xl md:text-3xl">7</div>
-             <div class="stat-desc text-xs md:text-sm">You're rocking it!</div>
         </div>
-
     </div>
-</div>
+
 
 {% endblock %}

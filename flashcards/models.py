@@ -86,3 +86,48 @@ class Review(models.Model):
 
     def __str__(self):
         return f"{self.flashcard} - Due: {self.next_review_date.strftime('%Y-%m-%d %H:%M')}"
+
+
+class DailyUserStats(models.Model):
+    user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE)
+    date = models.DateField()
+
+    total_reviews = models.PositiveIntegerField(default=0)
+    correct_reviews = models.PositiveIntegerField(default=0)
+    new_cards_studied = models.PositiveIntegerField(default=0)
+    cards_mastered = models.PositiveIntegerField(default=0)
+
+    streak = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        unique_together = ("user", "date")
+        ordering = ["-date"]
+
+    def accuracy(self):
+        if self.total_reviews == 0:
+            return 0
+        return round((self.correct_reviews / self.total_reviews) * 100, 2)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.date} ({self.total_reviews} reviews)"
+
+
+class FlashcardSetProgress(models.Model):
+    user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE)
+    flashcard_set = models.ForeignKey(FlashcardSet, on_delete=models.CASCADE)
+
+    total_cards = models.PositiveIntegerField(default=0)
+    cards_reviewed = models.PositiveIntegerField(default=0)
+    cards_mastered = models.PositiveIntegerField(default=0)
+    last_reviewed = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        unique_together = ("user", "flashcard_set")
+
+    def progress_percent(self):
+        if self.total_cards == 0:
+            return 0
+        return round((self.cards_reviewed / self.total_cards) * 100, 1)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.flashcard_set.title}"
