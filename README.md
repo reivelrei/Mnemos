@@ -2,6 +2,8 @@
 
 A powerful and intelligent flashcard application built with Django to enhance learning through smart algorithms and AI-assisted flashcard creation.
 
+[NEW] Demo version available here: https://mnemos.onrender.com/
+
 ## Features
 
 - **User Authentication**: Secure account registration and login system.
