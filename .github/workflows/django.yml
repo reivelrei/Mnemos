@@ -28,7 +28,7 @@ jobs:
     - name: Set Gemini API Key as Environment Variable
       run: echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" >> $GITHUB_ENV
     - name: Set SECRET_KEY Key as Environment Variable
-      run: echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >>
+      run: echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> $GITHUB_ENV
     - name: Set DEBUG as Environment Variable
       run: echo "DEBUG=${{ secrets.DEBUG }}" >> $GITHUB_ENV
     - name: Set ALLOWED_HOSTS as Environment Variable
