@@ -27,6 +27,16 @@ jobs:
         pip install -r requirements.txt
     - name: Set Gemini API Key as Environment Variable
       run: echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" >> $GITHUB_ENV
+    - name: Set SECRET_KEY Key as Environment Variable
+      run: echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >>
+    - name: Set DEBUG as Environment Variable
+      run: echo "DEBUG=${{ secrets.DEBUG }}" >> $GITHUB_ENV
+    - name: Set ALLOWED_HOSTS as Environment Variable
+      run: echo "ALLOWED_HOSTS=${{ secrets.ALLOWED_HOSTS }}" >> $GITHUB_ENV
+    - name: Set up SQLite Database
+      run: |
+          mkdir -p /tmp/sqlite
+          echo "DATABASE_URL=sqlite:////tmp/sqlite/test_db.sqlite3" >> $GITHUB_ENV
     - name: Run Tests
       run: |
         python manage.py test
