@@ -1,6 +1,6 @@
 import math
-from datetime import datetime, timedelta
-from typing import Tuple, Dict, Optional
+from datetime import datetime
+from typing import Tuple, Dict, Optional, List
 
 from flashcards.models import ReviewState
 
@@ -42,17 +42,21 @@ class FSRS:
     ]
 
     # Default desired retention rate
-    DEFAULT_REQUEST_RETENTION = 0.9
+    DEFAULT_REQUEST_RETENTION = 0.93
+
+    # Define the interval (in days) at which a card graduates from Learning/Relearning to Review
+    DEFAULT_GRADUATING_INTERVAL_DAYS = 6.0
 
     # Learning steps (in minutes) - Used when state is LEARNING or RELEARNING
     # For simplicity, we'll graduate directly to REVIEW state after the first correct answer
     # in LEARNING/RELEARNING based on calculated interval
     # FSRS aims to replace fixed steps, so we calculate interval directly.
 
-    def __init__(self, w: Optional[list] = None, request_retention: Optional[float] = None):
+    def __init__(self, w: Optional[List[float]] = None, request_retention: Optional[float] = None,
+                 graduating_interval_days: Optional[float] = None):
         self.w = w if w is not None else self.DEFAULT_PARAMS
         self.request_retention = request_retention if request_retention is not None else self.DEFAULT_REQUEST_RETENTION
-        # Ensure we have enough parameters
+        self.graduating_interval_days = graduating_interval_days if graduating_interval_days is not None else self.DEFAULT_GRADUATING_INTERVAL_DAYS
         if len(self.w) < 17:
             raise ValueError(f"FSRS requires at least 17 parameters (weights). Found {len(self.w)}.")
 
@@ -92,17 +96,23 @@ class FSRS:
             new_state = ReviewState.LEARNING  # Start in Learning state
 
             if grade == 1:  # Again
-                # Stay in learning, scheduled at 1 minute, FSRS suggests interval=1
-                interval = 1 / (24 * 60)  # Interval of 1 minute in days
+                # Short fixed interval for first failure
+                interval = 1 / (24 * 60)  # 1 minute in days
+                # Keep initial S/D low or reset based on w[0]
+                new_s = self.w[0]  # Reset S to 'Again' stability
+                # Optionally reset D or keep calculated initial_d
+                # new_d = self.w[4] # Reset D to default initial
             else:  # Hard, Good, Easy
-                # Directly graduate to Review state after first success
-                new_state = ReviewState.REVIEW
-                # Calculate interval based on initial stability
+                # Calculate the first interval based on initial stability
                 interval = self._calc_interval(new_s)
+                # Check if the first interval already meets graduation criteria
+                if interval >= self.graduating_interval_days:
+                    new_state = ReviewState.REVIEW  # Graduate immediately if interval is long enough
+                # else: Keep new_state = ReviewState.LEARNING
 
         elif current_state in [ReviewState.LEARNING, ReviewState.RELEARNING]:
             if last_review_date is None:
-                # Should not happen for LRN/REL states, but handle defensively
+                # Defensive coding: treat as new if somehow missing last review date
                 return self.update_state(ReviewState.NEW, 0.0, self.w[4], None, now, app_rating)
 
             elapsed_days = max(0, (now - last_review_date).total_seconds() / (24 * 60 * 60))
@@ -117,11 +127,18 @@ class FSRS:
                 interval = 10 / (24 * 60)  # Interval of 10 minutes in days
 
             else:  # Hard, Good, Easy
-                # Succeeded while in learning/relearning -> Graduate to REVIEW
+                # Succeeded while in learning/relearning
                 retrievability = self._calc_retrievability(current_s, elapsed_days)
                 new_s = self._calc_stability_after_success(current_s, new_d, retrievability, grade)
-                new_state = ReviewState.REVIEW
                 interval = self._calc_interval(new_s)
+                # Decide whether to graduate based on the new interval
+                if interval >= self.graduating_interval_days:
+                    new_state = ReviewState.REVIEW  # Graduate to Review
+                else:
+                    # Stay in Learning/Relearning, but use the calculated interval
+                    # If currently in RELEARNING, success might move it back to LEARNING or REVIEW
+                    # Let's simplify: If interval >= threshold -> REVIEW, else LEARNING
+                    new_state = ReviewState.LEARNING  # Stay/move back to Learning
 
         elif current_state == ReviewState.REVIEW:
             if last_review_date is None:
@@ -152,10 +169,14 @@ class FSRS:
         # Ensure stability is positive
         new_s = max(0.1, new_s)  # Minimum stability of 0.1 days
 
-        # Round interval to nearest whole day, minimum 1 day (unless it's a short learning interval)
-        if interval >= 1:
+        # Interval rounding and minimums (adjust logic slightly)
+        if new_state == ReviewState.REVIEW:
+            # For review cards, round to nearest day, minimum 1 day
             interval = max(1, round(interval))
-        # else: keep short intervals precise (e.g., for minutes)
+        elif interval < 1 / (24 * 60):  # Avoid zero or negative intervals in learning phase
+            # Ensure minimum interval (e.g., 1 minute) if calculated is too low
+            interval = 1 / (24 * 60)
+        # Keep short learning intervals precise (don't round < 1 day)
 
         return {
             "new_s": new_s,

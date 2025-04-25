@@ -34,7 +34,6 @@ def index(request):
         progress_data = {
             "green": 0,
             "yellow": 0,
-            "red": 0,
             "gray": 0,
         }
 
@@ -42,17 +41,13 @@ def index(request):
             reviewed = Review.objects.filter(user=user, flashcard__in=flashcards)
 
             # Still to be figured out
-            green = reviewed.filter(Q(stability__gt=20) | Q(repetitions__gt=4)).count()
-            yellow = reviewed.filter(stability__lte=20, state__in=[ReviewState.REVIEW]).count()
-            red = reviewed.filter(state__in=[ReviewState.LEARNING, ReviewState.RELEARNING]).count()
-            reviewed_card_ids = reviewed.values_list("flashcard_id", flat=True)
-            gray = total_cards - len(set(reviewed_card_ids))
+            green = reviewed.filter(state__in=[ReviewState.REVIEW]).count()
+            yellow = reviewed.filter(state__in=[ReviewState.LEARNING, ReviewState.RELEARNING]).count()
 
             # calculate percentages
             progress_data["green"] = int((green / total_cards) * 100)
             progress_data["yellow"] = int((yellow / total_cards) * 100)
-            progress_data["red"] = int((red / total_cards) * 100)
-            progress_data["gray"] = max(0, 100 - (progress_data["green"] + progress_data["yellow"] + progress_data["red"]))
+            progress_data["gray"] = max(0, 100 - (progress_data["green"] + progress_data["yellow"]))
 
         flashcard_set.progress = progress_data
 
