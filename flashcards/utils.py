@@ -57,7 +57,7 @@ def extract_and_validate_form_data(request, is_flashcard_set=True):
 
     # Common file validation
     if data["pdf_file"]:
-        if data["pdf_file"].size > 2.5 * 1024 * 1024:  # 2.5MB limit
+        if data["pdf_file"].size > 5 * 1024 * 1024:  # 5MB limit
             logger.error("PDF file size exceeds limit.")
             if is_ajax(request):
                 return JsonResponse({"status": "error", "message": "PDF file size must be less than 5MB"}, status=400)

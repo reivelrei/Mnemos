@@ -240,7 +240,7 @@
                         if (!pdfFile.type.includes('pdf')) {
                             errors.push("Invalid file type (must be PDF)");
                         }
-                        if (pdfFile.size > 2.5 * 1024 * 1024) {
+                        if (pdfFile.size > 5 * 1024 * 1024) {
                             errors.push("PDF must be smaller than 5MB");
                         }
                     }
@@ -388,7 +388,7 @@
             pdfFileInputSingle.addEventListener('change', function () {
                 if (this.files.length > 0) {
                     const pdfFile = this.files[0];
-                    const maxSize = 2.5 * 1024 * 1024; // 2.5MB
+                    const maxSize = 5 * 1024 * 1024; // 5MB
 
                     if (!pdfFile.type.includes('pdf')) {
                         alert("Please upload a valid PDF file.");
@@ -408,7 +408,7 @@
             pdfFileInput.addEventListener('change', function () {
                 if (this.files.length > 0) {
                     const pdfFile = this.files[0];
-                    const maxSize = 2.5 * 1024 * 1024; // 2.5MB
+                    const maxSize = 5 * 1024 * 1024; // 5MB
 
                     if (!pdfFile.type.includes('pdf')) {
                         alert("Please upload a valid PDF file.");
@@ -442,7 +442,7 @@
                             errors.push("Invalid file type (must be PDF)");
                         }
 
-                        if (pdfFile.size > 2.5 * 1024 * 1024) {
+                        if (pdfFile.size > 5 * 1024 * 1024) {
                             errors.push("PDF must be smaller than 5MB");
                         }
                     }
