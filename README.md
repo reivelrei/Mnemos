@@ -12,6 +12,7 @@ A powerful and intelligent flashcard application built with Django to enhance le
   - Add, edit, and delete flashcards within sets.
 - **Smart Learning Algorithm**:
   - Optimized review scheduling to reinforce learning effectively.
+  - Review page lists flashcard sets with fflashcards due to review.
 - **AI-Powered Flashcard Creation**:
   - Generate flashcards sets quickly using AI to save time and improve content quality.
 
