@@ -4,6 +4,8 @@ A powerful and intelligent flashcard application built with Django to enhance le
 
 [NEW] Demo version available here: https://mnemos.onrender.com/
 
+![mnemos](https://github.com/user-attachments/assets/ce98a20d-3904-4b18-95d4-cdb338462e31)
+
 ## Features
 
 - **User Authentication**: Secure account registration and login system.
