@@ -1,6 +1,6 @@
 # Mnemos
 
-A powerful and intelligent flashcard application built with Django to enhance learning through smart algorithms and AI-assisted flashcard creation.
+A powerful and intelligent flashcard application built with Django to enhance learning through the FSRS-4.5 spaced repetition algorithm and AI-assisted flashcard creation.
 
 [NEW] Demo version available here: https://mnemos.onrender.com/
 
@@ -10,19 +10,20 @@ A powerful and intelligent flashcard application built with Django to enhance le
 
 - **User Authentication**: Secure account registration and login system.
 - **Flashcard Management**:
-  - Create and organize flashcard sets.
+  - Create and edit flashcard sets.
   - Add, edit, and delete flashcards within sets.
 - **Smart Learning Algorithm**:
   - Optimized review scheduling to reinforce learning effectively.
-  - Review page lists flashcard sets with fflashcards due to review.
+  - Review page lists flashcard sets with flashcards due to review.
 - **AI-Powered Flashcard Creation**:
   - Generate flashcards sets quickly using AI to save time and improve content quality.
 
 ## Technologies Used
 - Django (Python) - Backend framework
-- SQLite - Database management
+- SQLite / PostgreSQL - Database management
 - Gemini API Integration - AI-assisted flashcard creation
 - HTML, CSS, JavaScript - Frontend
+- DaisyUI - Frontend CSS framework
 
 ## Installation
 
@@ -51,7 +52,7 @@ A powerful and intelligent flashcard application built with Django to enhance le
 1. Register or log in to your account.
 2. Create a new flashcard set.
 3. Add flashcards manually or use AI to generate them.
-4. Use the smart learning feature to review and reinforce knowledge.
+4. Review cards and reinforce knowledge.
    
 ## License
 This project is licensed under the MIT License.
